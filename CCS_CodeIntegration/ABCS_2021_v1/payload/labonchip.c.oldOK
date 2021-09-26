@@ -1,0 +1,580 @@
+/*
+ * labonchip.c
+ *
+ *  Created on: 8 gen 2021
+ *      Author: Augusto Nascetti
+ */
+
+#include "../memory/memory.h"
+#include "labonchip.h"
+
+uint8_t currentExperimentID;
+uint8_t experimentStatus[NUMBER_OF_EXPERIMENTS];
+uint16_t plannedStartTime[NUMBER_OF_EXPERIMENTS]; //in seconds
+uint16_t nextDeltaStep;
+struct Experiment labonchipExperiment_[NUMBER_OF_EXPERIMENTS];
+uint32_t startPauseTime;
+uint8_t standardActions[MAX_NUMBER_OF_STEPS] = { INITEXP, PUMPi, MEASURE,
+FINISH,
+                                                 FINISH, FINISH } // STANDARDSTEPS = 4
+uint16_t standardDurations[MAX_NUMBER_OF_STEPS] = { 20, 60, 600, 20, 0, 0, 0 };
+
+void checkExperiment()
+{
+    uint32_t timeNow = abacus_millis();
+
+//    if (satelliteStatus_.status != EXPERIMENTMODE)
+//        return;
+
+    //check if is time do do a next step or to start a new experiment
+
+    // start new experiment?
+    if (satelliteStatus_.experimentRunning == 0)
+    { //&& NORMALMODE (&& BAT>x && y<T<z)
+      //no experiment running
+      //check if it's time for a new experiment
+      //1) check the next experiment to do
+        int i;
+        uint8_t expFound = 0;
+        uint16_t nextStartTime = 0xFFFF;
+        for (i = 0; i < NUMBER_OF_EXPERIMENTS; i++)
+        {
+            if (experimentStatus[i] == TODO)
+            {
+                if (plannedStartTime[i] < nextStartTime)
+                {
+                    nextStartTime = plannedStartTime[i];
+                    satelliteStatus_.currentExperimentIndex = i;
+                    expFound = 1;
+                }
+            }
+        }
+        if (expFound == 0)
+        {
+            //no more experiments to do
+            return;
+        }
+        // time to start the new experiment?
+        if (timeNow
+                > ((uint32_t) plannedStartTime[satelliteStatus_.currentExperimentIndex]
+                        * 1000UL))
+        {
+            //try to start next experiment
+
+            //reset the experiment event variable
+            satelliteStatus_.experimentEvent = 0;
+            if (startExperiment(satelliteStatus_.currentExperimentIndex) == 0)
+            {
+                satelliteStatus_.currentExperimentStep = INITEXP; // step 0 is always the START
+                // the change of step is done in the running-experiment part
+                currentExperimentID =
+                        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].experimentID;
+                // experimentStatus is set in the BEGIN EVENT
+                //experimentStatus[satelliteStatus_.currentExperimentIndex]=RUNNING;
+                satelliteStatus_.experimentRunning = 1;
+
+                //stepStatus is set in the goToNextStep function
+                //so for the first step has to be set here
+                labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[0] =
+                RUNNING;
+                satelliteStatus_.experimentEvent += BEGIN;
+                nextDeltaStep = EXPDELTASTEP;
+                satelliteStatus_.expPauseInterval = 0
+
+            }
+            else
+            {
+                // report error
+                //experimentStatus[satelliteStatus_.currentExperimentIndex]=INITERROR;
+                satelliteStatus_.experimentRunning = 4;  //4 aborted
+                labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[0] =
+                INITERROR;
+                satelliteStatus_.experimentEvent += EXPERROR;
+            }
+        }
+        else
+        {
+            // no experiment running
+            // and still not time to start a new one
+            // return to jump next code
+            return;
+        }
+    }
+
+    // EXPERIMENT RUNNING
+    if (satelliteStatus_.experimentRunning == 1)
+    {
+
+        // don't need a 'wake up' because during experiment there will be
+        // triggers from MARIE
+
+        // there is a running experiment (eventually one just started now)
+        // is it time for a new step?
+
+        // store the time spent in current step taking into account of any pause
+        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].elapsedTimeinStep =
+                timeNow - satelliteStatus_.startTimeCurrentExpStep
+                        - satelliteStatus_.expPauseInterval;
+
+        // CHECK EVENTS
+        // experiment events:
+        // timeout, deltatime, wetin, wetout, lowbattery,
+        // hightemperature, extreq
+
+        // set the event variable considering all the events
+        // if more events occur apply the highest priority
+
+        // current step timetoupdate?
+        if ((labonchipExperiment_[satelliteStatus_.currentExperimentIndex].elapsedTimeinStep
+                > (uint32_t) nextDeltaStep * 1000UL))
+        {
+            nextDeltaStep += EXPDELTASTEP;
+            //satelliteStatus_.experimentEvent += TIMEDELTASTEP;
+            satelliteStatus_.experimentEvent |= BIT1;
+        }
+
+        // low power?
+        if ((satelliteStatus_.status == SAFEMODE))
+            //satelliteStatus_.experimentEvent += EXPSTANDBY;
+            satelliteStatus_.experimentEvent |= BIT5;
+
+        // step completed (timeout)?
+        if ((labonchipExperiment_[satelliteStatus_.currentExperimentIndex].elapsedTimeinStep
+                >= (uint32_t) labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepDuration[satelliteStatus_.currentExperimentStep]
+                        * 1000UL))
+        {
+            //satelliteStatus_.experimentEvent += STEPTIMEOUT;
+            satelliteStatus_.experimentEvent |= BIT2;
+        }
+
+        //satelliteStatus_.experimentEvent += checkWetSens(wetIn); //returns event WETINOK
+        if (checkWetSens(wetIn) == 1)
+            satelliteStatus_.experimentEvent |= BIT3;
+
+        //satelliteStatus_.experimentEvent += checkWetSens(wetIn); //returns event WETOUTOK
+        if (checkWetSens(wetOut) == 1)
+            satelliteStatus_.experimentEvent |= BIT4;
+
+        // Experiment state machine
+
+        switch (satelliteStatus_.currentExperimentStep)
+        {
+        case INITEXP:
+
+            if (satelliteStatus_.experimentEvent & BIT0)
+            {
+                // BEGIN
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT0;
+            }
+
+            if (satelliteStatus_.experimentEvent & BIT1)
+            {
+                // TIMEDELTASTEP
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT1;
+            }
+
+            if (satelliteStatus_.experimentEvent & BIT2)
+            {
+                // STEPTIMEOUT
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT2;
+            }
+
+            if (satelliteStatus_.experimentEvent & BIT3)
+            {
+                // WETINOK
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT2;
+            }
+            if (satelliteStatus_.experimentEvent & BIT4)
+            {
+                // WETOUTOK
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT4;
+            }
+            if (satelliteStatus_.experimentEvent & BIT5)
+            {
+                // EXPSTANDBY
+                //reset the event
+                satelliteStatus_.experimentEvent &= ~BIT5
+            }
+            if (satelliteStatus_.experimentEvent & BIT6)
+            {
+                // RESUME
+                //do nothing here
+            }
+            if (satelliteStatus_.experimentEvent & BIT7)
+            {
+                // error
+                //handel error
+            }
+
+            // replace switch case with if
+            /*
+
+             switch (satelliteStatus_.experimentEvent)
+             {
+
+             case BEGIN:
+             satelliteStatus_.startTimeCurrentExpStep = timeNow;
+             experimentStatus[satelliteStatus_.currentExperimentIndex] =
+             RUNNING;
+             nextDeltaStep = EXPDELTASTEP;
+             //labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[satelliteStatus_.currentExperimentStep]=RUNNING;
+             break;
+
+             case STEPTIMEOUT:
+             // end of step
+             //store telemetry before the next step
+             //configure beacon, telemetry and memory
+             goToNextStep(NEXTSTEP);
+             break;
+
+             case EXPSTANDBY:
+             satelliteStatus_.experimentRunning = 2;
+             experimentStatus[satelliteStatus_.currentExperimentIndex] =
+             PAUSED;
+             readAllSensors(wet, T, P, RAD);
+             goToNextStep(PAUSE);
+             break;
+
+             case TIMEDELTASTEP:
+             readAllSensors(T, P, RAD);
+             break;
+
+             case EXPERROR:
+             satelliteStatus_.currentExperimentStep = 0;
+             experimentStatus[satelliteStatus_.currentExperimentIndex] =
+             INITERROR;
+             break;
+
+             default:
+             break;
+             }
+             */
+            satelliteStatus_.experimentEvent = NONE;
+            break;
+
+        case PUMP1:
+        case PUMP2:
+        case PUMP3:
+        case PUMP4:
+        case PUMP5:
+        case PUMP6:
+            switch (satelliteStatus_.experimentEvent)
+            {
+            case BEGIN:
+                nextDeltaStep = EXPDELTASTEP;
+                pumpON (PUMP);
+                break;
+
+            case STEPTIMEOUT:
+                warning (wetInNOTOK);
+                pumpOFF(PUMP);
+                goToNextStep(NEXTSTEP);
+                break;
+
+            case WETINOK:
+                pumpOFF(PUMP);
+                goToNextStep(NEXTSTEP);
+                break;
+
+            case TIMEDELTASTEP:
+                checkWetSens (wetIn); //generates event WETINOK
+                readAllSensors(T, P, RAD);
+                break;
+
+            case EXPSTANDBY:
+                satelliteStatus_.experimentRunning = 2;
+                experimentStatus[satelliteStatus_.currentExperimentIndex] =
+                PAUSED;
+                readAllSensors(wet, T, P, RAD);
+                goToNextStep(PAUSE);
+                break;
+
+            case EXPERROR:
+                break;
+
+            default:
+                break;
+            }
+            satelliteStatus_.experimentEvent = NONE;
+            break;
+
+        case MEASURE:
+            switch (satelliteStatus_.experimentEvent)
+            {
+            case BEGIN:
+                nextDeltaStep = EXPDELTASTEP;
+
+                //put a time stamp for this event
+                //and store memory address
+                break;
+
+            case STEPTIMEOUT:
+                warning (wetOutNOTOK);
+                pumpOFF (PUMP);
+                goToNextStep(NEXTSTEP);
+                break;
+
+            case WETOUTOK:
+                pumpOFF(PUMP);
+                goToNextStep(NEXTSTEP);
+                break;
+
+            case TIMEDELTASTEP:
+                checkWetSens (wetOut);   //generates event WETOUTOK
+                readAllSensors(T, P, RAD);
+                break;
+
+            case EXPSTANDBY:
+                satelliteStatus_.experimentRunning = 2;
+                experimentStatus[satelliteStatus_.currentExperimentIndex] =
+                PAUSED;
+                readAllSensors(wet, T, P, RAD);
+                goToNextStep(PAUSE);
+                break;
+
+            case EXPERROR:
+                break;
+
+            default:
+                break;
+            }
+            satelliteStatus_.experimentEvent = NONE;
+            break;
+
+        case FINISH:
+            switch (satelliteStatus_.experimentEvent)
+            {
+            case BEGIN:
+                nextDeltaStep = EXPDELTASTEP;
+
+                // disable MARIE interrupt
+                // finish saving data
+                labonchipExperiment_[satelliteStatus_.currentExperimentIndex].expEndAddress =
+                        satelliteMemory_.marieStartFreeAddress; // -1 page
+                break;
+
+            case STEPTIMEOUT:
+                // switch off MARIE
+                // restore Normal opMode
+                labonchipExperiment_[satelliteStatus_.currentExperimentIndex].endUnixTime =
+                        timeNOW;
+                satelliteStatus_.experimentRunning = 0;
+                satelliteStatus_.currentExperimentStep = 0;
+                break;
+
+            case EXPERROR:
+                break;
+
+            default:
+                break;
+            }
+            satelliteStatus_.experimentEvent = NONE;
+            break;
+
+        default:
+            break;
+        }
+    } // end if experiment running
+
+    // EXPERIMENT PAUSED
+    if (satelliteStatus_.experimentRunning == 2)
+    {
+        switch (satelliteStatus_.experimentEvent)
+        {
+        /*case MAXPAUSE:
+         // not restored Normal opMode
+         satelliteStatus_.experimentRunning = 1;
+         break;*/
+
+        case EXPRESUME:
+            // restored Normal opMode
+            satelliteStatus_.expPauseInterval += timeNow - startPauseTime;
+            satelliteStatus_.experimentRunning = 1;
+            break;
+
+        case EXPERROR:
+            break;
+
+        default:
+            break;
+        }
+
+    }
+
+    // EXPERIMENT ABORTED
+    if (satelliteStatus_.experimentRunning == 4)
+    {
+
+        //HANDLE ABORTED EXPERIMENts
+        switch (satelliteStatus_.experimentEvent)
+        {
+
+        case EXPERROR:
+            break;
+
+        default:
+            break;
+        }
+
+    }
+}
+
+void goToNextStep(uint8_t nextStep)
+{
+    if (nextStep == PAUSE)
+    {
+        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[satelliteStatus_.currentExperimentStep] =
+        PAUSED;
+        //calculate the duration of the pause
+        startPauseTime = abacus_millis();
+        //EXPERIMENT STEP REMAINS THE SAME
+        //THE PAUSE STATE IS A SUPERIOR STATE
+        return;
+    }
+    if (nextStep == NEXTSTEP)
+    {
+        //mark previous step as COMPLETED
+        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[satelliteStatus_.currentExperimentStep] =
+        COMPLETED;
+
+        if (satelliteStatus_.currentExperimentStep
+                >= labonchipExperiment_[satelliteStatus_.currentExperimentIndex].numberOfSteps)
+        {
+            // sanity check
+            // the experiment should be finished
+            // handle the problem
+            return;
+        }
+        // go to the next step
+        satelliteStatus_.currentExperimentStep++;
+        satelliteStatus_.startTimeCurrentExpStep = timeNow;
+        //reset the pause timer
+        satelliteStatus_.expPauseInterval = 0UL;
+        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].elapsedTimeinStep =
+                0UL;
+        labonchipExperiment_[satelliteStatus_.currentExperimentIndex].stepStatus[satelliteStatus_.currentExperimentStep] =
+        RUNNING;
+        satelliteStatus_.experimentEvent = BEGIN;
+    }
+}
+
+int startExperiment(uint8_t experimentIndex)
+{ //alternatively use experimentID
+
+    if (experimentIndex >= NUMBER_OF_EXPERIMENTS)
+        return;
+    satelliteStatus_.currentExperimentIndex = experimentIndex;
+    //labonchipExperiment_[experimentIndex].currentStep=0; //check if it is needed
+    //probably the satelliteStatus_.currentExperimentStep is enough and more efficient
+    //because it requires less memory and only one experiment at time is executed
+    //(indeed it can be useful if overlapped experiments were made)
+    satelliteStatus_.currentExperimentStep = 0;
+
+    uint32_t timeNow = abacus_millis();
+    labonchipExperiment_[experimentIndex].startUnixTime = timeNow;
+    satelliteStatus_.expPauseInterval = 0UL;
+    currentExperimentID = labonchipExperiment_[experimentIndex].experimentID;
+    labonchipExperiment_[experimentIndex].stepStatus[0] = RUNNING;
+    labonchipExperiment_[experimentIndex].expStartAddress =
+            satelliteMemory_.marieStartFreeAddress;
+
+    // ACTIONS
+    int okToGo = 0;
+    // okToGo+=marieSwitchON();
+    // okToGo+=measureDose();
+    // okToGo+=measureLTP(); //light temperature and pressure (Kayser board)
+    // okToGo+=measureWetIN();
+    // okToGo+=measureWetOUT();
+    // okToGo+=getTelemetry();
+    if (okToGo == 0)
+    {
+        //exp setup init ok
+        labonchipExperiment_[experimentIndex].stepStatus[0] = COMPLETED;
+
+    }
+    else
+    {
+        //failed to setup the experiment
+        //use binary coding of the errors to know the reason and
+        //decide how to handle this situation
+        labonchipExperiment_[experimentIndex].stepStatus[0] = ABORTED;
+    }
+    return okToGo;
+}
+
+int setupExperiment(uint8_t experimentIndex, uint8_t id, uint8_t numberofsteps,
+                    uint8_t *stepactions, uint16_t *stepdurations)
+{
+    if (experimentIndex >= NUMBER_OF_EXPERIMENTS)
+        return -1;
+    if (numberofteps >= MAX_NUMBER_OF_STEPS)
+        return -2;
+    labonchipExperiment_[experimentIndex].experimentID = id;
+    labonchipExperiment_[experimentIndex].numberOfSteps = numberofsteps;
+    labonchipExperiment_[experimentIndex].startUnixTime = 0UL;
+    labonchipExperiment_[experimentIndex].endUnixTime = 0UL;
+    labonchipExperiment_[experimentIndex].elapsedTimeinStep = 0UL;
+    labonchipExperiment_[experimentIndex].expStartAddress = MEMORY_MARIE_START;
+    labonchipExperiment_[experimentIndex].expEndAddress = MEMORY_MARIE_START;
+    int i;
+    for (i = 1; i < numberofteps; i++)
+    {
+        labonchipExperiment_[experimentIndex].stepStatus[i] = TODO;
+        labonchipExperiment_[experimentIndex].stepAction[i] = *stepactions;
+        stepactions++;
+        labonchipExperiment_[experimentIndex].stepDuration[i] = *stepdurations;
+        stepdurations++;
+    }
+}
+
+int setupStandardExperiment(uint8_t experimentIndex)
+{
+    if (experimentIndex >= NUMBER_OF_EXPERIMENTS)
+        return -1;
+    labonchipExperiment_[experimentIndex].experimentID = experimentIndex;
+    labonchipExperiment_[experimentIndex].numberOfSteps = STANDARDSTEPS;
+    labonchipExperiment_[experimentIndex].startUnixTime = 0UL;
+    labonchipExperiment_[experimentIndex].endUnixTime = 0UL;
+    labonchipExperiment_[experimentIndex].elapsedTimeinStep = 0UL;
+    labonchipExperiment_[experimentIndex].expStartAddress = MEMORY_MARIE_START;
+    labonchipExperiment_[experimentIndex].expEndAddress = MEMORY_MARIE_START;
+    int i;
+    for (i = 1; i < MAX_NUMBER_OF_STEPS; i++)
+    {
+        labonchipExperiment_[experimentIndex].stepStatus[i] = TODO;
+        if (standardActions[i] == PUMPi)
+            labonchipExperiment_[experimentIndex].stepAction[i] =
+                    experimentIndex + 1; // experiment 0 pump 1, ecc.
+        else
+            labonchipExperiment_[experimentIndex].stepAction[i] =
+                    standardActions[i];
+
+        labonchipExperiment_[experimentIndex].stepDuration[i] =
+                standardDurations[i];
+    }
+    return 0;
+}
+
+void setupAllExperiments()
+{
+    int i;
+    int res = 0;
+    for (i = 1; i < NUMBER_OF_EXPERIMENTS; i++)
+    {
+        res += setupStandardExperiment[i];
+    }
+}
+
+/*
+ void finishExperiment(uint8_t experimentIndex){ //alternatively use experimentID
+
+ if(experimentIndex >= NUMBER_OF_EXPERIMENTS)
+ return;
+ currentExperimentID=labonchipExperiment_[experimentIndex].experimentID;
+ }
+ */
