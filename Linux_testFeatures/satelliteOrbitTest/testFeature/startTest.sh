@@ -1,4 +1,5 @@
-#!/bin/bash
+
+ll#!/bin/bash
 DIR="dataTest"
 if [ -d "$DIR" ]; then
   # Take action if $DIR exists. #
@@ -8,11 +9,7 @@ else
 fi
 
 ./startMeanAcceleration
-sleep 2
+sleep 1
 ./startComparationTest
-
-cat result.csv
-cat resultCpp.csv
-
 
 mv result.csv resultCpp.csv dataTest
