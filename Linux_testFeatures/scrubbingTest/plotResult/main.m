@@ -16,7 +16,7 @@ plot(indexTotali,percentageTotali,'LineWidth',2);
 
 xlabel('Numero di errori per iterazione')
 ylabel('Percentuale di blocchi di dati corrotti[%]')
-legend('Percentage')
+legend('Rapporto percentuale tra byte corrotti e byte totali in memoria')
 grid on;
 
 saveas(gcf,'scrubbingTestTotali.png')
@@ -37,7 +37,7 @@ plot(indexParziali,percentageParziali,'LineWidth',2);
 
 xlabel('Numero di errori per iterazione')
 ylabel('Percentuale di blocchi di dati corrotti[%]')
-legend('Percentage')
+legend('Rapporto percentuale tra byte corrotti e byte totali in memoria')
 grid on;
 
 saveas(gcf,'scrubbingTestParziali.png')
