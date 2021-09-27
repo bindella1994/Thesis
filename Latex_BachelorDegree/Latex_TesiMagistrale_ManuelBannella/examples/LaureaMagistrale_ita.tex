@@ -79,16 +79,28 @@ informatica e statistica}
 
 \begin{abstract}
 DA COMPLETARE
-This document is an example which shows the main features of
-the \LaTeXe\ class \texttt{sapthesis.cls} developed by Manuel Bannella
-with the help of GuIT (Gruppo Utilizzatori Italiani di \TeX).
 
-    Illustrare il titolo della tesi: la prima funzione di un abstract è quella di spiegare il titolo della tesi e la correlazione con l’argomento scelto;
-    Sintetizzare gli aspetti importanti: che si tratti di un abstract tesi compilativa o di ricerca, triennale o magistrale, lo scopo fondamentale di questo strumento è di fornire informazioni sulla tesi anche a chi non ha tempo di leggerla per intero;
-    Offrire una visione completa della tesi: l’abstract è utile anche per fornire una prima panoramica del tuo elaborato al lettore, illustrando i punti trattati nel corpo della tesi;
-    Spiegare la metodologia e l’approccio scientifico alla materia: è importante, in una tesi, illustrare accuratamente la metodologia di lavoro adottata e il perché della scelta di un determinato approccio.
-    Tieni in considerazione anche che un buon abstract non è più lungo del 5 per cento dell’intera tesi triennale o magistrale: si tratterà, dunque, di scrivere circa 250 – 300 parole.
 
+    %Illustrare il titolo della tesi: la prima funzione di un abstract è quella di spiegare il titolo della tesi e la correlazione con l’argomento scelto;
+    %Sintetizzare gli aspetti importanti: che si tratti di un abstract tesi compilativa o di ricerca, triennale o magistrale, lo scopo fondamentale di questo strumento è di fornire informazioni sulla tesi anche a chi non ha tempo di leggerla per intero;
+    %Offrire una visione completa della tesi: l’abstract è utile anche per fornire una prima panoramica del tuo elaborato al lettore, illustrando i punti trattati nel corpo della tesi;
+    %Spiegare la metodologia e l’approccio scientifico alla materia: è importante, in una tesi, illustrare accuratamente la metodologia di lavoro adottata e il perché della scelta di un determinato approccio.
+    %Tieni in considerazione anche che un buon abstract non è più lungo del 5 per cento dell’intera tesi triennale o magistrale: si tratterà, dunque, di scrivere circa 250 – 300 parole.
+
+Questo lavoro di tesi magistrale si propone di sviluppare un sistema di controllo della consistenza dei dati di un "Sistema Embedded"\footnote{Sistema Embedded: sistema spesso parte integrante di sistemi più grandi progettato per svolgere un compito preciso e determinato (a differenza di quanto succede nei sistemi general purpose)} ed in particolare cerca di risolvere problemi relativi alla "reliability" di computer di bordo dedicato ad applicazioni aerospaziali.
+
+Grazie allo sviluppo tecnologico raggiunto negli ultimi decenni ed in particolare in ambito dell'elettronica digitale, anche applicazioni specifiche di ambito aerospaziale come ad esempio lo sviluppo firmware di "Picosatelliti"\footnote{Picosatellite: i picosatelliti o picosat sono satelliti miniaturizzati insolitamente piccoli e leggeri, con una massa compresa tra 100 grammi e 1 kg} ha potuto beneficiare dell'aumento delle prestazioni e del rimpicciolimento dei singoli componenti hardware. 
+
+Come conseguenza anche sistemi a risorse limitate hanno potuto sviluppare applicazioni firmware sempre più complesse e raffinate.
+
+L'ambiente spaziale ed in particolare zone del cosmo come le fasce di Van Allen rappresenta però una sfida per quanto riguarda problemi di consistenza della memoria dell'intero sistema. Le radiazioni cosmiche possono infatti generare corruzioni all'interno del firmware.
+
+In questo lavoro sono state usate diverse tecniche software con l'obiettivo di rilevare e correggere eventuali errori e malfunzionamenti del sistema hardware: - utilizzo di ridondanza software (di copie dello stesso firmware), - protezione dell'informazione tramite algoritmi di rilevazione e correzione dell'errore, - diagnostica ed eventuale esclusione dei sottosistemi non correttamente funzionanti.
+
+L'approccio utilizzato durante l'implementazione di ogni singola tecnica ha cercato di rispettare gli standard di programmazione utilizzati per questi ambiti specifici (in particolare lo standard "Misra C"\footnote{Misra C :  standard di buona programmazione per software che richiedono un grado di affidabilità superiore rispetto alle applicazioni generiche} )
+ed inoltre ogni nuovo sviluppo ha superato una serie di test di valutazione delle prestazioni che di rispetto dei requisiti richiesti da questi tipi di applicazioni.
+
+I risultati ottenuti durante la fase di testing dei diversi applicativi hanno determinato un sensibile irrobustimento di tutto il firmware. Sebbene non sia stato possibile determinare sul microcontrollore i fattori come il consumo di memoria e di tempo, data l'impossibilità di simulare una situazione reale di volo, l'architettura software è stato resa il più possibile scalabile in modo da determinare un compromesso tra i fattori precedentemente espressi e la protezione del sistema.
 \end{abstract}
 
 \begin{acknowledgments}
@@ -2104,7 +2116,7 @@ Analizzando la figura 4.6 è possibile apprezzare un andamento lineare crescente
 A parità di frequenza di corruzione della memoria, è necessario dunque eseguire una scelta appropriata della frequenza con cui l'algoritmo di scrubbing sia attivato. Questa scelta garantirebbe un numero inferiore di ripristini del registro e in secondo luogo manterrebbe sempre una copia più aggiornata di tutto registro.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[scale=1]{examples/scrubbingTestParziali.png}}
+\centerline{\includegraphics[scale=0.7]{examples/scrubbingTestParziali.png}}
 \caption{la percentuale di byte errati del registro di stato in relazione al variare del numero di corruzioni.}
 \label{fig}
 \end{figure}
@@ -4716,6 +4728,11 @@ Texas Instruments.
 \bibitem{M. J. Downey}
 European Space Research and Technology Centre, Noordwijk, The Netherlands.
 \textit{"Satellite Reliability"}.
+
+\bibitem{Pier Luca Montessoro}
+Prof. Pier Luca Montessoro e Luca Da Re.
+\textit{"Fondamenti di Informatica – I Sistemi Embedded"}.
+2007
 
 \end{thebibliography}
 
