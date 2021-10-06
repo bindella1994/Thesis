@@ -78,8 +78,6 @@ informatica e statistica}
 \dedication{Dedicato a\\ Francesco Savi}
 
 \begin{abstract}
-DA COMPLETARE
-
 
     %Illustrare il titolo della tesi: la prima funzione di un abstract è quella di spiegare il titolo della tesi e la correlazione con l’argomento scelto;
     %Sintetizzare gli aspetti importanti: che si tratti di un abstract tesi compilativa o di ricerca, triennale o magistrale, lo scopo fondamentale di questo strumento è di fornire informazioni sulla tesi anche a chi non ha tempo di leggerla per intero;
@@ -763,12 +761,101 @@ La corruzione di una parte di codice può essere eseguita all'interno della fine
 In questo modo il codice di controllo CRC utilizzato per controllare l'integrità del codice salvato potrà valutare un cambiamento all'interno dello spazio di memoria protetto e quindi innescare l'algoritmo di bootloader.
 
 Una volta inserita la corruzione, clicchiamo "Enter" e continuiamo a far funzionare il firmware.
-In questo caso il programma entra nel controllo dell'integrità e riconosce la corruzione e di conseguenza genera il reset.
+In questo caso il programma entra nel controllo dell'integrità e dopo aver rivelato la corruzione iniziando la procedura di reset.
 
-Il programma ora entra all'interno della funzione "bootloader start" e controlla nuovamente l'integrità del codice, riscontrando nuovamente un problema.
-Riscontrando il problema all'interno della fase di bootloader, il sistema attesta per due volte di seguito la corruzione di una locazione di codice e innesca quindi il vero e proprio algoritmo di bootloader. 
+\begin{figure}[htbp]
+\centerline{\includegraphics[scale=0.55]{examples/BootloaderTestCorruzioni2.PNG}}
+\caption{Corruzione sia della sezione di RAM e del primo codice di backup.}
+\label{fig}
+\end{figure}
+\newline
 
-Il codice si occupa di ritrovare una copia integra di codice da poter utilizzare per sostituire il vecchio codice. Una volta attestata la correttezza del codice di backup, l'algoritmo incomincia a sovrascrivere il codice precedente direttamente col nuovo codice integro.
+Il primo passo per far scattare la funzione di ripristino del codice eseguito tramite l'algoritmo di bootloader è quello di riconoscere la corruzione. Questa funzione di controllo dell'integrità del codice è eseguita dalla seguente parte di codice:
+
+\begin{lstlisting}[language=C]
+    int8_t memory_mcu_checkProgramIntegrity(uint8_t force)
+{
+    uint16_t crcBankA, crcBankB, crcBankACalc, crcBankBCalc;
+
+    if(force == 0)
+    {
+        //Read values from config area MEMORY_PROGRAMINTEGRITY_ADD for banks A and B
+        uint8_t buffer[5];
+        abacus_flash_mcu_read_data(MCUMEMORY_PROGRAMINTEGRITY_ADD, buffer, 5);
+
+        //First Magic word
+        if(buffer[0] != MEMORY_MAGICWORD)
+            force = 1;  //Force recalculation
+        else
+        {
+            //Second CRC bank A
+            char2uint(&buffer[1], &crcBankA);
+
+            //Third CRC bank B
+            char2uint(&buffer[3], &crcBankB);
+        }
+    }
+
+    //Calculate CRC16 of Bank Aa
+    crcBankACalc = abacus_flash_mcu_crc(MEMORY_PROGRAM_A_ADD, MEMORY_PROGRAM_A_SIZE);
+
+    //Calculate CRC16 of Bank B
+    crcBankBCalc = abacus_flash_mcu_crc(MEMORY_PROGRAM_B_ADD, MEMORY_PROGRAM_B_SIZE);
+
+    //Save into memory the new CRC values
+    if(force == 1)
+    {
+        //Delete the segment and save values:
+        abacus_flash_mcu_erase(MCUMEMORY_PROGRAMINTEGRITY_ADD, 512);
+
+        //Serialize the values:
+        uint8_t buffer[5];
+        buffer[0] = MEMORY_MAGICWORD;
+        uint2char(&crcBankACalc, &buffer[1]);
+        uint2char(&crcBankBCalc, &buffer[3]);
+
+        //Save to MCU memory
+        abacus_flash_mcu_write_data(MCUMEMORY_PROGRAMINTEGRITY_ADD, buffer, 5);
+
+        //Exit indicating saved values
+        return 1;
+    }
+
+    //Program integrity confirmed?
+    if(crcBankACalc == crcBankA && crcBankBCalc == crcBankB)
+        return 0;
+
+    //Ups we have a memory corruption
+    return -1;
+}
+\end{lstlisting}
+
+La procedura di controllo dell'integrità della memoria viene richiamata periodicamente dal microcontrollore. Questa funzione si occupa di controllare in primo luogo la correttezza di un codice (la cosiddetta Magic Word presente in ogni copia) e successivamente si occupa di controllare tramite l'algoritmo CRC l'integrità dell'intero codice eseguito. Il test da esito negativo se i CRC valutati a priori e posteriori non coincidono.
+
+Se tale test da esito negativo, il sistema viene riavviato tramite un software reset.
+
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[scale=0.55]{examples/BootloaderTestCorruzioni3.PNG}}
+\caption{Sezione di codice nuovamente corretta con la seconda versione di backup.}
+\label{fig}
+\end{figure}
+\newline
+
+Una volta reinizializzato il sistema il programma ora entra all'interno della funzione "bootloader start" e controlla nuovamente l'integrità del codice, riscontrando nuovamente un problema di consistenza dei dati. Tramite questa procedura il sistema attesta per due volte di seguito la corruzione di una locazione di codice e innesca quindi il vero e proprio algoritmo di bootloader (che viene solo avviato in fase di start del sistema). 
+
+Il programma si occupa di ritrovare una copia integra di codice da poter utilizzare per sostituire quello vecchio corrotto.
+
+Nel nostro caso il microcontrollore passa a valutare l'integrità della seconda copia, riscontrando in questo caso la correttezza della copia del codice e procedendo alla sovrascrittura del codice corrente. Il risultato è nuovamente la correzione del codice corrotto.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[scale=0.55]{examples/DebugBootloader.PNG}}
+\caption{Valore che identifica la seconda versione del codice di backup, l'unica versione corretta.}
+\label{fig}
+\end{figure}
+\newline
+
+Una volta attestata la correttezza del codice di backup, l'algoritmo incomincia a sovrascrivere il codice precedente direttamente col nuovo codice integro. Ultimata questa procedura il codice dovrebbe ritornare dunque integro e nuovamente riutilizzabile.
 \newline
 
 \begin{lstlisting}[language=C]
@@ -798,49 +885,14 @@ Il codice si occupa di ritrovare una copia integra di codice da poter utilizzare
 \newline
 Terminata tale fase, il sistema viene resettato in modo da poter controllare la correttezza del nuovo codice e successivamente ripartire con una nuova versione di codice da poter eseguire ciclicamente.
 
-Completata tale procedura notiamo che il codice è nuovamente integro. Viene quindi mantenuta l'integrità del codice
-nonostante la corruzione del codice principale.
+Completata tale procedura notiamo che il codice è nuovamente integro. Viene quindi mantenuta l'integrità del codice nonostante la corruzione del codice principale.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.55]{examples/BootloaderTestCorruzioni1.PNG}}
 \caption{Sezione di Memory Browser riferita sezione di codice originale.}
 \label{fig}
 \end{figure}
-\newline
 
-
-Passiamo dunque ad un secondo test, corrompendo sia una locazione di codice attualmente in uso sia una locazione del primo
-codice di backup.
-
-Per effettuare la corruzione di entrambe gli indirizzi utilizziamo lo stesso metodo dello scorso test.
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[scale=0.55]{examples/BootloaderTestCorruzioni2.PNG}}
-\caption{Corruzione sia della sezione di RAM e del primo codice di backup.}
-\label{fig}
-\end{figure}
-\newline
-
-
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[scale=0.55]{examples/DebugBootloader.PNG}}
-\caption{Valore che identifica la seconda versione del codice di backup, l'unica versione corretta.}
-\label{fig}
-\end{figure}
-\newline
-
-I passi che il bootloader esegue nella fase di test sono i medesimi rispetto a prima fino alla fase della ricerca di un
-possibile candidato. Come notiamo dalla voce in Figura 3.14 la quale fa riferimento alle variabili in fase di Debug, la nuova locazione che fornisce è la posizione iniziale del secondo firmware di backup, pari a 0x30000, ad indicare che il primo firmware risulta non integro.
-
-Il microcontrollore passa a valutare l'integrità della seconda copia, riscontrando in questo caso la correttezza della copia del codice e procedendo alla sovrascrittura del codice corrente. Il risultato è nuovamente la correzione del codice corrotto.
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[scale=0.55]{examples/BootloaderTestCorruzioni3.PNG}}
-\caption{Sezione di codice nuovamente corretta con la seconda versione di backup.}
-\label{fig}
-\end{figure}
-\newline
 
 \subsection{Iniezioni di corruzioni di tutte le copie di backup di codice e valutazione del comportamento }
 
@@ -1597,34 +1649,35 @@ Necessità di processare l'intero blocco di memoria per correggere errori.\par
 
 \subsection{Integrità dei dati del Registro di Stato del Satellite}
 
-Il registro di stato del satellite è una struttura di dati che fornisce le informazioni necessarie alla continuazione della missione spaziale. 
+Il registro di stato del satellite è una struttura di dati che fornisce le informazioni necessarie per il monitoraggio e la gestione della missione spaziale. 
 
-L’obiettivo del satellite è infatti quello di completare determinati task, i quali hanno una propria durata temporale e delle determinate azioni da eseguire. 
+L’obiettivo del satellite è infatti quello di completare determinati task, tra cui degli esperimenti di natura chimica, i quali hanno una propria durata temporale e delle determinate azioni da eseguire. 
 
 Per far ciò, il microcontrollore fornisce la lista di task e gestisce l’ordine temporale dell’esecuzione di quest’ultimi.
-Il registro di stato del satellite fornisce la lista di informazioni al microcontrollore con cui può monitorare l’andamento dei task.
+Il registro di stato del satellite fornisce la lista di informazioni al microcontrollore con cui può gestire l’andamento dei task.
 
-Il mantenimento dell’integrità delle informazioni di questo registro di stato anche in caso di reset per vari motivi (guasti di parte del sistema, corruzione di parte della memoria) permette al microcontrollore di risalire alle ultime informazioni salvate e di conseguenza fornisce la possibilità di una ripartenza non dal punto di inizio ma dall’ultimo punto salvato. 
+Il mantenimento dell’integrità delle informazioni del registro di stato anche in caso di reset ( dovuti a vari motivi come ad guasti di parte del sistema, corruzione di parte della memoria o blocco delle azioni del satellite) permette al microcontrollore di risalire alle ultime informazioni salvate e di conseguenza fornisce la possibilità di una ripartenza non dal punto di inizio della missione (quindi dalla vera e propria inizializzazione del sistema), ma piuttosto dall'ultimo punto di backup salvato. 
 
-Se ciò non avvenisse, il microcontrollore sarebbe costretto a resettare tutto il sistema e sarebbe necessariamente obbligato alla ripartenza del sistema dallo stato iniziale generando così un andamento dei task non coincidente con quello determinato in partenza ma una ripartenza dei tali reset.
+In assenza di questo meccanismo di backup periodico il microcontrollore sarebbe costretto a resettare tutto il sistema e sarebbe necessariamente obbligato alla ripartenza del sistema dallo stato iniziale generando così un andamento dei task non coincidente con lo scheduling originariamente determinato in partenza.
 
 
 
 \subsection{Gestione del registro di stato del satellite dopo un reset
 }
 Descriviamo ora quali azioni il microcontrollore esegue nel caso di un reset del sistema.
-La strategia di base per mantenere integro il registro è semplicemente quella della Information redundancy, ovvero l’azione di generare periodicamente copie di parti di registro di stato necessarie per la ripartenza in zona di memoria distanti dall’originale. 
+La strategia di base per mantenere integro il registro è la tecnica chiamata "Information redundancy", ovvero l’azione di generare periodicamente copie di parti di registro di stato necessarie per la ripartenza in zona di memoria distanti dall’originale. 
 \newline
-Tali copie se necessario verranno poi consultate e copiate soltanto dopo averne verificato l’integrità dei valori.
-Questa strategia permette al microcontrollore di ripartire con una certa probabilità da una sezione dei task antecedente al reset e quindi non obbliga quest’ultimo a ripristinare con i valori iniziali il registro (come se fosse un primo avvio del sistema).
+Tali copie vengono generalmente tenute da parte in assenza di malfunzionamenti. Se invece è riscontrato un problema nella memoria principale, il contenuto delle copie viene consultato, controllato nell'integrità a sua volta ed infine copiato al posto dei valori corrotti.
+
+Questa strategia permette al microcontrollore di ripartire con una certa probabilità da una sezione dei task antecedente al reset e quindi non obbliga quest’ultimo a ripristinare all'interno della memoria i valori iniziali (come se fosse un primo avvio del sistema).
 Descriviamo dunque le varie versioni del registro di stato presenti nel microcontrollore:
 \begin{itemize}
     \item SatelliteStatus: la versione originale, si trova nella memoria SRAM ed è etichettata nel codice con la direttiva \#PRAGMA PERSISTENT, che obbliga il sistema ad inizializzarla soltanto durante il primo avvio con dei valori scelti per poi mantenerla con i valori già conosciuti anche nel caso di un riavvio (un software reset) semplicemente non inizializzando nuovamente i valori. 
-    Soltanto nel caso di Power Reset la memoria SRAM, essendo una memoria volatile perde di fatto i valori correnti salvati e ritorna non inizializzata. In questo caso sarà necessaria una nuova inizializzazione o con i valori salvati nelle altre copie o con i valori di default.
+    Soltanto nel caso di Power Reset la memoria SRAM, essendo una memoria volatile perde di fatto i valori correnti salvati e ritorna non inizializzata. In questo caso sarà necessaria in ogni caso una nuova inizializzazione o con i valori salvati nelle altre copie o con i valori di default.
     
-    \item SatelliteStatusRamBackup: la versione di backup in memoria SRAM, ha anch’essa l’etichetta \#PRAGMA PERSISTENT e viene periodicamente sovrascritta durante la gestione di ogni task.Viene mantenuta continuamente integra e non soggetta a corruzioni da un algoritmo di scrubbing, ovvero un codice che tramite una ridondanza permette di evidenziare eventuali corruzioni e di correggere queste ultime molto spesso  (fino a 2 bit errati ogni blocco da 8 byte).
-     In questo modo, è possibile mitigare il fenomeno della corruzione dei dati e limitare il disturbo generato dalle radiazioni cosmiche a cui il satellite è soggetto in orbita.
-    Poiché l’algoritmo di scrubbing non garantisce sempre la correzione delle corruzioni, come misura aggiuntiva di verifica dell’integrità si è deciso di effettuare una Forward Error Detection, ovvero di salvarsi a parte un valore di parità CRC-16 confrontabile con la parità calcolata sui valori verificati.In questo modo il ripristino dei valori in SRAM viene effettuato soltanto nel caso in cui venga assicurata al coincidenza di parità CRC-16 a priori o posteriori. In caso contrario, si è scelto di scartare i valori in SRAM e di fare affidamento a quelli in memoria FLASH che successivamente descriverle.
+    \item SatelliteStatusRamBackup: la versione di backup in memoria SRAM, ha anch’essa l’etichetta \#PRAGMA PERSISTENT e viene periodicamente sovrascritta durante la gestione di ogni task.Viene mantenuta continuamente integra e non soggetta a corruzioni da un algoritmo di scrubbing, ovvero un codice che tramite una ridondanza permette di evidenziare eventuali corruzioni e di correggerle (fino a 2 bit errati ogni blocco da 8 byte).
+    In questo modo, è possibile mitigare il fenomeno della corruzione dei dati e limitare il disturbo generato dalle radiazioni cosmiche a cui il satellite è soggetto in orbita.
+    Poiché l’algoritmo di scrubbing non garantisce sempre la correzione delle corruzioni, prima di eseguire il ripristino dei valori nella versione di backup, il sistema si assicura dell'assenza di errori in tutta la memoria. In questo modo il ripristino dei valori in SRAM viene effettuato soltanto nel caso in cui venga assicurata al coincidenza di parità di parità quadridimensionali a priori o posteriori. In caso contrario, si è scelto di scartare i valori in SRAM e di fare affidamento a quelli in memoria FLASH che successivamente descriverle.
     
     \item SatelliteStatusRomBackup: la versione di backup in memoria flash, la quale risulta una memoria non volatile e più protetta rispetto alle radiazioni. 
 Il backup del registro di stato viene eseguita in questa memoria soltanto per quanto riguarda gli eventi critici, in quanto questa memoria risulta più lenta rispetta alla memoria SRAM specialmente nel caso di riscrittura dei dati, essendo scrivibile soltanto per pagine e non per singole locazioni.
@@ -2089,15 +2142,15 @@ int16_t count_errors(int16_t a)
 
 In questa sezione andremo ad esaminare tutti i test cases in cui il firmware presente sul microcontrollore utilizzerà l'algoritmo di scrubbing per recuperare eventuali dati persi all'interno del registro di stato a causa di corruzioni esterne.
 
-Ogni test del funzionamento dell'algoritmo partirà da una situazione iniziale di codice operativo, ovvero oltre la fase di inizializzazione del microcontrollore, in modo da garantire un contenuto del registro di stato del satellite coerente e assicurato che il backup del registro di stato del satellite è già avvenuto almeno una volta.
+Ogni test del funzionamento dell'algoritmo partirà da una fase di inizializzazione del software ed in particolare verrà assicurata l'inizializzazione del registro di stato del satellite. I valori contenuti all'interno della struttura di scrubbing partiranno da una situazione di non corruzione e inoltre verrà assicurato che il backup del registro di stato del satellite è già avvenuto almeno una volta.
 
-La modalità di studio del comportamento del codice in cui ci porremo sarà quella di debug, ovvero la modalità che permetterà di esaminare in tempo reale il contenuto delle singole locazioni di memoria .
-Questa modalità ci permette anche di inserire delle corruzioni in singole locazioni sia di memoria RAM che di Flash, così da simulare delle corruzioni puntuali del memoria dell'MCU.
+La modalità di studio del comportamento del codice in cui ci siamo posti è quella di debug, ovvero la modalità che ha ci ha permesso di esaminare in tempo reale il contenuto delle singole locazioni di memoria .
+Questa modalità ci ha permesso anche di inserire delle corruzioni in singole locazioni (sia di memoria RAM che di Flash), così da simulare delle corruzioni puntuali del memoria dell'MCU.
 
-Tutte le verifiche e le corruzioni avverranno tramite il "Memory Browser" contenuto in CCS.
+Tutte le verifiche e le corruzioni in fase di integrazione finale del software sono state eseguite tramite il "Memory Browser" contenuto in Code Composite Studio.
 
-L'obiettivo finale di ogni test sarà quello di valutare il contenuto finale del registro di stato, ponendoci da oracolo e valutando tramite l'osservazione diretta della memoria l'effettiva correzione delle corruzioni.\newline\newline
-Il requisito che il sistema dovrà garantire durante l'esecuzione del codice sarà la rivelazione e correzione di una corruzione del registro di stato del satellite utilizzando i valori di backup presenti in persistent RAM.
+L'obiettivo finale di ogni test è stato di valutare il contenuto finale del registro di stato, ponendoci da oracolo e valutando tramite l'osservazione diretta della memoria l'effettiva correzione delle corruzioni.\newline\newline
+Il requisito che il sistema ha dovuto garantire durante l'esecuzione del codice è la rivelazione e correzione di una corruzione del registro di stato del satellite utilizzando i valori di backup presenti in persistent RAM.
 
 \subsection{Rivelazione e correzione di una correzione all'interno di uno stub di registro di stato del satellite}
 
@@ -2107,16 +2160,20 @@ Nel nostro caso le informazioni protette sono state quelle contenute all'interno
 Il test è stato eseguito al variare dell'entità del numero delle corruzioni generate sia all'interno della memoria principale che quella di scrubbing. Il numero di corruzioni (ovvero di bit invertiti) è stato di egual numero in entrambe le memorie.
 
 Infine, la valutazione della prestazione dell'algoritmo è stata eseguita valutando il numero di byte corrotti in relazione al numero totale di byte totali (nel nostro caso il valore era pari a 80 byte, cioè la dimensione totale in byte del registro di stato del satellite). 
-Il confronto è stato possibile eseguendo un confronto tra i valori originali (conservati in una copia del registro di stato) con i valori finali contenuti all'interno della memoria principale.
+La verifica della correttezza dell'algoritmo è stata possibile eseguendo un confronto tra i valori originali (conservati in una copia del registro di stato) con i valori finali contenuti all'interno della memoria principale. Il parametro fondamentale dunque per valutare il vantaggio nell'utilizzo 
 
 \newpage
 
-Analizzando la figura 4.6 è possibile apprezzare un andamento lineare crescente della percentuale del numero di errori. Per valori bassi di numero di corruzioni il sistema riesce dunque a mantenere statisticamente il registro di stato sempre integro. All'aumentare del numero di corruzioni le prestazioni dunque tendono a diminuire. Questo è dovuto al fatto che con sempre meno frequenza è possibile utilizzare il backup in persistent RAM per ripristinare la memoria principale. L'algoritmo infatti permette il ripristino soltanto se tutti i blocchi di memoria protetta sono integri nel momento in cui si esegue il restore della memoria. In caso contrario, durante la fase di start-up il sistema sarebbe costretto a ripartire da capo con dei valori di inizializzazione, generando quindi un aumento notevole del numero di volte della reinizializzazione del registro del satellite. 
+Analizzando la figura 4.6 è possibile apprezzare un andamento crescente della percentuale del numero di errori. Per valori bassi di numero di corruzioni il sistema riesce dunque a mantenere statisticamente il registro di stato sempre integro. All'aumentare del numero di corruzioni le prestazioni dunque tendono a diminuire. Questo è dovuto al fatto che con sempre meno frequenza è possibile utilizzare il backup in persistent RAM per ripristinare la memoria principale. L'algoritmo infatti permette il ripristino soltanto se tutti i blocchi di memoria protetta sono integri nel momento in cui si esegue il restore della memoria. In caso contrario, durante la fase di start-up il sistema sarebbe costretto a ripartire da capo con dei valori di inizializzazione, generando quindi un aumento notevole del numero di volte della reinizializzazione del registro del satellite. 
 
 A parità di frequenza di corruzione della memoria, è necessario dunque eseguire una scelta appropriata della frequenza con cui l'algoritmo di scrubbing sia attivato. Questa scelta garantirebbe un numero inferiore di ripristini del registro e in secondo luogo manterrebbe sempre una copia più aggiornata di tutto registro.
 
+Eseguendo un fit tramite Maltab del risultato ottenuto al variare del numero di corruzioni all'interno di tutta la memoria è possibile dunque stimare la probabilità di corruzione.
+
+Di seguito è disponibile la stima che più precisamente stima la probabilità. Il polinomio di quinto grado risulta la stima più accurata.
+
 \begin{figure}[htbp]
-\centerline{\includegraphics[scale=0.7]{examples/scrubbingTestParziali.png}}
+\centerline{\includegraphics[scale=0.6]{examples/scrubbingTestParziali.png}}
 \caption{la percentuale di byte errati del registro di stato in relazione al variare del numero di corruzioni.}
 \label{fig}
 \end{figure}
@@ -2194,7 +2251,7 @@ scrub.h:
 
 /*
  *
- * Funzione di calcolo della parit� Verticale, genera un byte a partire da un blocco di otto byte
+ * Funzione di calcolo della parità Verticale, genera un byte a partire da un blocco di otto byte
  *
 */
 
@@ -2848,7 +2905,7 @@ Questo  meccanismo è molto utile per mantenere memoria dello stato del satellit
 Lo stesso funzionamento è replicato nel caso del controllo delle memorie flash esterne al microcontrollore, poiché anche questi hardware hanno dei registri specifici di identificazione i quali possono essere consultati tramite protocollo SPI.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[scale=0.47]{examples/corruptionCheckAsm.PNG}}
+\centerline{\includegraphics[scale=0.43]{examples/corruptionCheckAsm.PNG}}
 \caption{Diagramma di flusso dell'algoritmo di autodiagnosi. Il controllo di integrità è eseguito su tutti i componenti hardware definiti, ma il grafico ne evidenzia soltanto due per semplificazione grafica.}
 \label{fig}
 \end{figure}
@@ -3749,7 +3806,7 @@ Una volta ultimati tutti i controlli relativi ai sensori, l'algoritmo di autodia
 \label{fig}
 \end{figure}
 
-In questo caso il valore di soglia viene quindi dunque confrontato con la soglia di "0x8". In caso di superamento il sistema sarebbe riavviato. Nel nostro caso (vedi figura 5.12), il controllo ha esito negativo e dunque il sistema continua la sua inizializzazione.\newline
+In questo caso il valore di soglia viene quindi dunque confrontato con la soglia di "0x8". In caso di superamento il sistema sarebbe riavviato. Nel nostro caso (vedi figura 5.12), il controllo ha esito negativo e dunque il sistema continua la sua inizializzazione e terminando l'algoritmo di autodiagnosi.\newline
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.7]{examples/9_ControlloDelNumeroDiFaultNO_RIAVVIO.JPG}}
