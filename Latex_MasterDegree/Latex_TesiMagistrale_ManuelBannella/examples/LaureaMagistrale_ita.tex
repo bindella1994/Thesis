@@ -1693,8 +1693,177 @@ Durante la fase di testing, abbiamo eseguito una valutazione del il tempo di ese
 \label{fig}
 \end{figure}
 
+\clearpage
 
 \subsection{Codice sorgente dell'algoritmo di scrubbing}
+
+Scrubbing.h:
+\begin{lstlisting}[language=c][fontsize=\small]
+#ifndef SCRUBBING_H_
+#define SCRUBBING_H_
+#include "abacus.h"
+#include "satellite/configuration.h"
+#include "PersistentRam/PersistentRam.h"
+
+
+uint8_t scrubbingRoutine();
+
+
+uint8_t periodicScrubPersistentRAM();
+
+
+#endif /* SCRUBBING_H_ */
+\end{lstlisting}
+Scrubbing.c:
+\begin{lstlisting}[language=c][fontsize=\small]
+#include "PersistentRam/PersistentRam.h"
+#include "BackupRom/BackupRom.h"
+#include "satellite/satsystem_init.h"
+
+#define ROM_BACKUP_AVAILABLE 0
+uint8_t scrubbingRoutine()
+{
+
+    uint32_t i;
+    uint8_t isPersistentRamUncorrupted = 0;
+    for ( i=0; i<PERSISTENT_RAM_LENGTH/8; ++i) {
+        if(scrub_recovery((uint8_t*)ramBackup_.persistentRam[8*i],i)!=0x0) {
+            isPersistentRamUncorrupted = 0xff;
+            break;
+        }
+    }
+    if( isPersistentRamUncorrupted && ramBackup_.isPersistentRamWritten ) {
+        restoreFromPersistentRam((uint8_t*)&ramBackup_.persistentRam[0],(uint8_t*)&satelliteStatus_,PERSISTENT_RAM_LENGTH);
+    }
+    else
+    {
+
+#if ROM_BACKUP_AVAILABLE
+        if( isRomBackupPossible((uint32_t)ROM_BACKUP_STARTING_POINTER,(uint32_t)PERSISTENT_RAM_BYTE_SIZE) )
+        {
+            restoreDataFromRomBackup((uint32_t)MEMORY_TO_BACKUP_STARTING_POINTER, (uint32_t)ROM_BACKUP_STARTING_POINTER, (uint32_t)PERSISTENT_RAM_BYTE_SIZE);
+        }
+#endif
+
+        backupInPersistentRam((uint8_t*)&ramBackup_.persistentRam[0], (uint8_t*)&satelliteStatus_, PERSISTENT_RAM_LENGTH);
+    }
+
+    return 0;
+}
+
+
+uint8_t periodicScrubPersistentRAM(){
+    uint32_t r;
+    for ( r = 0; r< PERSISTENT_RAM_LENGTH/8 ; ++r ) {
+        scrub_recovery((uint8_t*)&ramBackup_.persistentRam[8*r],PERSISTENT_RAM_LENGTH/8);
+    }
+}
+
+\end{lstlisting}
+RomBackup.h:
+\begin{lstlisting}[language=c][fontsize=\small]
+#ifndef BACKUPROM_H_
+#define BACKUPROM_H_
+
+#include "../PersistentRam/PersistentRam.h"
+#include "memory/abacus_flash.h"
+#include "memory/abacus_flash_mcu.h"
+#include "abacus_utils.h"
+struct RomBackup
+{
+    uint8_t persistentRam[PERSISTENT_RAM_LENGTH];
+    uint16_t crc16BackupData;
+}romBackup;
+
+#define ROM_BACKUP_STARTING_POINTER 0x28000
+#define ROM_BACKUP_BLOCK_SIZE 512
+
+extern struct RamBackup ramBackup_;
+
+void setCrcInRomBackup();
+
+int16_t getCrcInRomBackup();
+
+uint8_t backupDataInRomBackup(uint32_t dataStartingAddress, uint32_t backupStartingPointer, uint32_t size);
+
+uint8_t restoreDataFromRomBackup(uint32_t dataStartingAddress, uint32_t backupStartingPointer, uint32_t size);
+
+uint8_t isRomBackupUncorructed(uint32_t dataStartingAddress, uint32_t size);
+
+uint8_t isRomBackupPossible(uint32_t dataStartingAddress, uint32_t size);
+
+#endif /* BACKUPROM_H_ */
+
+
+\end{lstlisting}
+
+RomBackup.c:
+\begin{lstlisting}[language=c][fontsize=\small]
+#include "BackupRom.h"
+#include "abacus.h"
+#include <math.h>
+void setCrcInRomBackup()
+{
+
+}
+int16_t getCrcInRomBackup()
+{
+    return romBackup.crc16BackupData;
+}
+uint8_t backupDataInRomBackup(uint32_t dataStartingAddress, uint32_t backupStartingPointer, uint32_t size)
+{
+    uint8_t result = 0x00;
+
+    if(abacus_flash_mcu_erase(backupStartingPointer, size))
+    {
+        abacus_flash_write_data(AB_FLASH_MCU,(uint32_t)backupStartingPointer,(uint8_t*)dataStartingAddress,size);
+        uint16_t* crcValue=&romBackup.crc16BackupData;
+        calculate_crc16((uint16_t*)backupStartingPointer, size, crcValue, 1);
+
+        result=0xff;
+
+
+    }
+    return result;
+}
+
+uint8_t restoreDataFromRomBackup(uint32_t dataStartingAddress, uint32_t backupStartingPointer, uint32_t size)
+{
+    uint8_t result = 0x00;
+    uint16_t crcValue=0xffff;
+    calculate_crc16((uint16_t*)backupStartingPointer, size, (uint16_t*)&crcValue, 1);
+
+    if(crcValue==romBackup.crc16BackupData)
+    {
+        uint8_t* data = (uint8_t*)dataStartingAddress;
+        abacus_flash_read_data(AB_FLASH_MCU, dataStartingAddress, data, PERSISTENT_RAM_LENGTH);
+
+
+        result=0xff;
+    }
+
+    return result;
+}
+
+uint8_t isRomBackupUncorructed(uint32_t dataStartingAddress, uint32_t size)
+{
+    uint8_t result = 0x00;
+    uint16_t crcValue=0xffff;
+    calculate_crc16((uint16_t*)dataStartingAddress, size, (uint16_t*)&crcValue, 1);
+
+    if(crcValue==romBackup.crc16BackupData)
+    {
+        result=0xff;
+    }
+    return result;
+}
+
+uint8_t isRomBackupPossible(uint32_t dataStartingAddress, uint32_t size)
+{
+    return ( (romBackup.crc16BackupData != 0x00) && isRomBackupUncorructed(dataStartingAddress,size) );
+}
+
+\end{lstlisting}
 
 PersistentRam.h:
 \begin{lstlisting}[language=c][fontsize=\small]
@@ -1704,27 +1873,9 @@ PersistentRam.h:
 #include "abacus.h"
 
 
-#define PERSISTENT_RAM_BYTE_SIZE                32
-#define PERSISTENT_RAM_STARTING_POINTER     0x1000
-#define MEMORY_TO_BACKUP_STARTING_POINTER   0x0100
+#define SCRUBBING_PERSISTENT_RAM_LENGTH 80
 
-typedef struct ParityElement
-{
-    int16_t     hParity;
-    int16_t     vParity;
-    int16_t     dParity;
-}ParityElement;
-
-struct RamBackup
-{
-uint16_t persistentRam[PERSISTENT_RAM_BYTE_SIZE];
-ParityElement fourDimensionalParityPart[PERSISTENT_RAM_BYTE_SIZE/8+1];
-uint8_t isPersistentRamWritten;
-uint8_t scrubbingFlag;
-
-}ramBackup;
-
-void toggleBit(int16_t Data[8],int16_t len,int16_t i,int16_t j);
+void toggle_bit(int16_t Data[8],int16_t len,int16_t i,int16_t j);
 
 int16_t Calc_HParity(int16_t Data[]);
 
@@ -1732,312 +1883,85 @@ int16_t Calc_VParity(int16_t Data[]);
 
 int16_t Calc_DParity(int16_t Data[]);
 
-int16_t find_position(int16_t a, int16_t *ptr);
+int8_t scrubbing_bytes(int16_t Data[8],int8_t index);
 
+int16_t find_position(int16_t a, int16_t *ptr);
 
 void initialize(int16_t *pt, int16_t size);
 
 int16_t count_errors(int16_t a);
 
-void FourDimensionalParityCodeBackup(int16_t *startingPointer, int16_t size);
+void scrubbing_parity_generation(int16_t Data[8],int8_t stage,int8_t index );
 
-void FourDimensionalParityCodeRestore(int16_t *startingPointer, int16_t size);
+void setScrubParity(uint8_t* index_pointer, uint8_t index_struct );
+
+int8_t scrub_recovery(uint8_t* index_pointer, uint8_t index_struct );
+
+void backupInPersistentRam (uint8_t* persistentStartingPointer,
+                           uint8_t* memoryStartingPointer,
+                           uint32_t length);
+void restoreFromPersistentRam ( uint8_t* persistentStartingPointer,
+                                uint8_t* memoryStartingPointer,
+                                uint32_t length);
 
 uint8_t cleanPersistentRam(uint16_t *byteElements, uint32_t size);
 
-uint8_t backupDataInPersistentRam(uint16_t *byteElements, uint8_t *startingPointer, uint32_t size);
+#define PERSISTENT_RAM_LENGTH 80
+#pragma PERSISTENT(parity_)
+struct parity
+{
+    int8_t h1[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
+    int8_t v1[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
+    int16_t d1[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
 
-uint8_t restoreDataFromPersistentRam(uint16_t *byteElements, uint8_t *startingPointer, uint32_t size);
+    int8_t h2[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
+    int8_t v2[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
+    int16_t d2[SCRUBBING_PERSISTENT_RAM_LENGTH/8];
+}parity_;
+#pragma PERSISTENT (ramBackup_)
+struct RamBackup
+{
+    uint8_t persistentRam[PERSISTENT_RAM_LENGTH];
+    uint8_t isPersistentRamWritten;
+}ramBackup_;
 
-uint8_t isPersistentRamUncorrupted(int16_t *startingPointer, int16_t size);
-
-uint8_t isScrubbingPossible(int16_t *startingPointer, int16_t size);
 
 #endif
+
+
 \end{lstlisting}
 
 PersistentRam.c:
-
 \begin{lstlisting}[language=c][fontsize=\small]
 #include "PersistentRam.h"
-#include "FourDimensionalParityCode.h"
+#include <time.h>
+#include <stdlib.h>
+//struct RamBackup ramBackup_;
 
-void FourDimensionalParityCodeBackup(int16_t *startingPointer, int16_t size)
+int16_t Calc_VParity(int16_t Data[])
 {
-    int16_t Data[8];
-    int16_t h[8], v[8], d[16];
-    int16_t i, j;//, index;
-    for (i = 0; i < size; ++i)
+    int16_t parity = 0;
+    int16_t i;
+    for(i=0; i<8; i++)
     {
-        for (j = 0; j < 8; ++j)
-        {
-            Data[j] = *startingPointer;
-            startingPointer++;
-        }
-        initialize(h, 8);
-        initialize(v, 8);
-        initialize(d, 16);
-        ramBackup.fourDimensionalParityPart[i].hParity = Calc_HParity(Data);
-        ramBackup.fourDimensionalParityPart[i].vParity = Calc_VParity(Data);
-        ramBackup.fourDimensionalParityPart[i].dParity = Calc_DParity(Data);
+        parity = parity ^ Data[i];
     }
-}
-void FourDimensionalParityCodeRestore(int16_t *startingPointer, int16_t size)
-{
-    int countErrors = 0;
-    int16_t Data[8];
-    int16_t h[8], v[8], d[16];
-    ParityElement parityElement1, parityElement2, parityElementN;
-    int16_t i, j;
-
-    for (i = 0; i < size; ++i)
-    {
-        for (j = 0; j < 8; ++j)
-        {
-            Data[j] = startingPointer[8 * i + j];
-        }
-        initialize(h, 8);
-        initialize(v, 8);
-        initialize(d, 16);
-        //A priori
-        parityElement1.hParity = ramBackup.fourDimensionalParityPart[i].hParity;
-        parityElement1.vParity = ramBackup.fourDimensionalParityPart[i].vParity;
-        parityElement1.dParity = ramBackup.fourDimensionalParityPart[i].dParity;
-        //A posteriori
-        parityElement2.hParity = Calc_HParity(Data);
-        //parityElement2.vParity = Calc_VParity(Data);
-        parityElement2.dParity = Calc_DParity(Data);
-        //Errors Evaluation
-        parityElementN.hParity = count_errors(parityElement2.hParity ^ parityElement1.hParity);
-        parityElementN.vParity = count_errors(parityElement2.vParity ^ parityElement1.vParity);
-        parityElementN.dParity = count_errors(parityElement2.dParity ^ parityElement1.dParity);
-
-        countErrors += count_errors(parityElement2.hParity ^ parityElement1.hParity);
-        countErrors += count_errors(parityElement2.vParity ^ parityElement1.vParity);
-        countErrors += count_errors(parityElement2.dParity ^ parityElement1.dParity);
-        //Find Position Of Errors
-        find_position(parityElement2.hParity ^ parityElement1.hParity, h);
-        find_position(parityElement2.vParity ^ parityElement1.vParity, v);
-        find_position(parityElement2.dParity ^ parityElement1.dParity, d);
-
-        if (parityElementN.hParity == 0 && parityElementN.vParity == 0 && parityElementN.dParity == 0)
-        {
-            //Nothing to do
-        }
-        if ((parityElementN.hParity == 1 && parityElementN.vParity == 1 && parityElementN.dParity == 1) && (d[0] == h[0] + v[0]))
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-        }
-        if ((parityElementN.hParity == 1 && parityElementN.vParity == 1 && parityElementN.dParity == 1) && (d[0] != h[0] + v[0]))
-        {
-            //printf("\nTriple bit error, correctable\n");
-            if (d[0] < (h[0] + v[0]))
-            {
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0] - 1);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0] - 1, v[0]);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0] - 1, v[0] - 1);
-            }
-            else
-            {
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0] + 1);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0] + 1, v[0]);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0] + 1, v[0] + 1);
-            }
-        }
-        if ((parityElementN.hParity == 1 && parityElementN.vParity == 1 && parityElementN.dParity == 3) && (d[1] == h[0] + v[0]))
-        {
-            //Nothing to do
-        }
-        if (parityElementN.hParity == 2 && parityElementN.vParity == 2 && parityElementN.dParity == 2)
-        {
-            if (d[0] == h[0] + v[0])
-            {
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[1]);
-            }
-            else
-            {
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-                toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[1]);
-            }
-        }
-        if (parityElementN.hParity == 0 && parityElementN.vParity == 2 && parityElementN.dParity == 2)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, (d[0] - v[0]), v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, (d[1] - v[1]), v[1]);
-        }
-        if (parityElementN.hParity == 2 && parityElementN.vParity == 0 && parityElementN.dParity == 2)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], (d[0] - h[0]));
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], (d[1] - h[1]));
-        }
-        if (parityElementN.hParity == 2 && parityElementN.vParity == 2 && parityElementN.dParity == 0)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[1]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[0]);
-        }
-        if (parityElementN.hParity == 1 && parityElementN.vParity == 3 && parityElementN.dParity == 3)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[1]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[2]);
-        }
-        if (parityElementN.hParity == 3 && parityElementN.vParity == 1 && parityElementN.dParity == 3)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[2], v[0]);
-        }
-        if (parityElementN.hParity == 3 && parityElementN.vParity == 3 && parityElementN.dParity == 1)
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[2], v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[1]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[2]);
-        }
-        if (parityElementN.hParity == 3 && parityElementN.vParity == 3 && parityElementN.dParity == 3 && (d[0] == h[0] + v[0]) && (d[1] == h[1] + v[1]) && (d[2] == h[2] + v[2]))
-        {
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[0], v[0]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[1], v[1]);
-            toggleBit(&startingPointer[8 * i], PERSISTENT_RAM_BYTE_SIZE, h[2], v[2]);
-        }
-        if (parityElementN.dParity > 3 || parityElementN.dParity < 0)
-        {
-            //Nothing to do
-        }
-    }
-}
-
-uint8_t cleanPersistentRam(uint16_t *byteElements, uint32_t size)
-{
-    uint8_t result = 0x00;
-    int16_t  i;
-    for ( i = 0; i < size; ++i)
-    {
-        byteElements[i] = 0x0000;
-    }
-
-    result = 0xff;
-    ramBackup.isPersistentRamWritten = 0x00;
-    return result;
-}
-
-uint8_t backupDataInPersistentRam(uint16_t *byteElements, uint8_t *startingPointer, uint32_t size)
-{
-    uint8_t result = 0x00;
-    int16_t  i;
-    for ( i = 0; i < size; ++i)
-    {
-        byteElements[i] = (uint16_t)startingPointer[i];
-    }
-    ramBackup.isPersistentRamWritten =  0xff;
-    result = 0xff;
-    return result;
-}
-
-uint8_t restoreDataFromPersistentRam(uint16_t *byteElements, uint8_t *startingPointer, uint32_t size)
-{
-    uint8_t result = 0x00;
-    int16_t  i;
-    for (i = 0; i < size; ++i)
-    {
-        startingPointer[i] = (uint8_t)byteElements[i];
-    }
-    result =  0xff;
-    return result;
-}
-
-uint8_t isPersistentRamUncorrupted(int16_t *startingPointer, int16_t size)
-{
-    uint8_t result = 0x0;
-    int16_t countErrors = 0;
-    int16_t Data[8];
-    int16_t h[8], v[8], d[16];
-    int16_t i, j;
-
-    for (i = 0; i < size; ++i)
-    {
-        for (j = 0; j < 8; ++j)
-        {
-            Data[j] = startingPointer[8 * i + j];
-        }
-        initialize(h, 8);
-        initialize(v, 8);
-        initialize(d, 16);
-        //A priori
-        parityElement1.hParity = ramBackup.fourDimensionalParityPart[i].hParity;
-        parityElement1.vParity = ramBackup.fourDimensionalParityPart[i].vParity;
-        parityElement1.dParity = ramBackup.fourDimensionalParityPart[i].dParity;
-        //A posteriori
-        parityElement2.hParity = Calc_HParity(Data);
-        parityElement2.vParity = Calc_VParity(Data);
-        parityElement2.dParity = Calc_DParity(Data);
-        //Errors Evaluation
-        countErrors += count_errors(parityElement2.hParity ^ parityElement1.hParity);
-        countErrors += count_errors(parityElement2.vParity ^ parityElement1.vParity);
-        countErrors += count_errors(parityElement2.dParity ^ parityElement1.dParity);
-    }
-    if (countErrors > 0)
-    {
-        result = 0xff;
-    }
-    return result;
-}
-
-uint8_t isScrubbingPossible(int16_t *startingPointer, int16_t size)
-{
-    return ((ramBackup.isPersistentRamWritten!=0) && isPersistentRamUncorrupted((int16_t *)startingPointer, size));
-}
-\end{lstlisting}
-
-FourDimensionalParityCode.h:
-
-\begin{lstlisting}[language=c][fontsize=\small]
-#ifndef FOURDIMENSIONALPARITYCODE_H_
-#define FOURDIMENSIONALPARITYCODE_H_
-#include "abacus.h"
-void toggleBit(int16_t Data[8],int16_t len,int16_t i,int16_t j);
-
-int16_t Calc_HParity(int16_t Data[]);
-
-int16_t Calc_DParity(int16_t Data[]);
-
-int16_t find_position(int16_t a, int16_t *ptr);
-
-
-void initialize(int16_t *pt, int16_t size);
-
-int16_t count_errors(int16_t a);
-
-#endif
-
-\end{lstlisting}
-
-FourDimensionalParityCode.c:
-
-\begin{lstlisting}[language=c][fontsize=\small]
-#include "FourDimensionalParityCode.h"
-
-void toggleBit(int16_t *ptr,int16_t len,int16_t i,int16_t j)
-{
-    if(i<len)
-    {
-        ptr[i] ^= 1UL << (j);  //  Check to write inside the matrix and not beyond
-    }
+    return parity;
 }
 
 int16_t Calc_HParity(int16_t Data[])
 {
     int16_t parity = 0;
     int16_t temp;
-    int16_t i, j, index;
-    for (i = 0; i < 8; i++)
+    int16_t i,j, index;
+    for(i=0; i<8; i++)
     {
         index = 0x80;
         temp = 0;
-        for (j = 0; j < 8; j++)
+        for(j=0; j<8; j++)
         {
-            if (Data[i] & index)
-            { // Check the bit value at index position
+            if(Data[i] & index)
+            {
                 temp = temp ^ 0x0100;
             }
             index = index >> 1;
@@ -2047,28 +1971,21 @@ int16_t Calc_HParity(int16_t Data[])
     }
     return parity;
 }
-int16_t Calc_VParity(int16_t Data[]){
-    int16_t parity = 0;
-    int16_t i;
-    for(i=0; i<8; i++){
-        parity = parity ^ Data[i];// XOR whole word/byte in single operation
-    }
-    return parity;
-}
+
 int16_t Calc_DParity(int16_t Data[])
 {
     int16_t parity = 0;
     int16_t dparity = 0;
     int16_t temp;
-    int16_t i, j, index;
-    for (i = 0; i < 8; i++)
+    int16_t i,j, index;
+    for(i=0; i<8; i++)
     {
         index = 0x01;
         temp = 0;
-        for (j = i; j >= 0; j--)
+        for(j=i; j>=0; j--)
         {
-            if (Data[j] & index); //
-            { // Check the bit value at index position
+            if(Data[j] & index)
+            {
                 temp = temp ^ 0x0100;
             }
             index = index << 1;
@@ -2076,14 +1993,15 @@ int16_t Calc_DParity(int16_t Data[])
         parity = parity ^ temp;
         parity = parity >> 1;
     }
-    for (i = 1; i <= 7; i++)
+
+    for(i=1; i<=7; i++)
     {
         index = 0x80;
         temp = 0;
-        for (j = i; j <= 7; j++)
+        for(j=i; j<=7; j++)
         {
-            if (Data[j] & index)
-            { // Check the bit value at index position
+            if(Data[j] & index)
+            {
                 temp = temp ^ 0x80;
             }
             index = index >> 1;
@@ -2091,50 +2009,263 @@ int16_t Calc_DParity(int16_t Data[])
         dparity = dparity ^ temp;
         dparity = dparity >> 1;
     }
-    dparity = dparity << 8;     // Make the space for parity bits
-    dparity = dparity ^ parity; // Concatenate the two parity bits
+    dparity = dparity << 8;
+    dparity = dparity ^ parity;
+
     return dparity;
 }
+
+int8_t scrubbing_bytes(int16_t Data[8],int8_t index)
+{
+    int16_t h[8],v[8],d[16];
+    int8_t dn, hn, vn;
+
+    hn = count_errors(parity_.h2[index] ^ parity_.h1[index]);
+    vn = count_errors(parity_.v2[index] ^ parity_.v1[index]);
+    dn = count_errors(parity_.d2[index] ^ parity_.d1[index]);
+    find_position(parity_.h2[index] ^ parity_.h1[index], h);
+    find_position(parity_.v2[index] ^ parity_.v1[index], v);
+    find_position(parity_.d2[index] ^ parity_.d1[index], d);
+
+    if(hn==0 && vn==0 && dn==0)
+    {
+        return 0;
+    }
+    if((hn==1 && vn==1 && dn==1) && (d[0]==h[0]+v[0]))
+    {
+        toggle_bit(Data,8,h[0],v[0]);
+    }
+    if((hn==1 && vn==1 && dn==1) && (d[0]!=h[0]+v[0]))
+    {
+        if(d[0]<(h[0]+v[0]))
+        {
+            toggle_bit(Data,8,h[0],v[0]-1);
+            toggle_bit(Data,8,h[0]-1,v[0]);
+            toggle_bit(Data,8,h[0]-1,v[0]-1);
+        }
+        else
+        {
+            toggle_bit(Data,8,h[0],v[0]+1);
+            toggle_bit(Data,8,h[0]+1,v[0]);
+            toggle_bit(Data,8,h[0]+1,v[0]+1);
+        }
+    }
+    if((hn==1 && vn==1 && dn==3) && (d[1]==h[0]+v[0]))
+    {
+    }
+    if(hn==2 && vn==2 && dn==2)
+    {
+        if(d[0]==h[0]+v[0])
+        {
+            toggle_bit(Data,8,h[0],v[0]);
+            toggle_bit(Data,8,h[1],v[1]);
+        }
+        else
+        {
+            toggle_bit(Data,8,h[1],v[0]);
+            toggle_bit(Data,8,h[0],v[1]);
+        }
+    }
+    if(hn==0 && vn==2 && dn==2)
+    {
+        toggle_bit(Data,8,(d[0]-v[0]),v[0]);
+        toggle_bit(Data,8,(d[1]-v[1]),v[1]);
+    }
+    if(hn==2 && vn==0 && dn==2)
+    {
+        toggle_bit(Data,8,h[0],(d[0]-h[0]));
+        toggle_bit(Data,8,h[0],(d[1]-h[1]));
+    }
+    if(hn==2 && vn==2 && dn==0)
+    {
+        toggle_bit(Data,8,h[0],v[1]);
+        toggle_bit(Data,8,h[1],v[0]);
+    }
+    if(hn==1 && vn==3 && dn==3)
+    {
+        toggle_bit(Data,8,h[0],v[0]);
+        toggle_bit(Data,8,h[0],v[1]);
+        toggle_bit(Data,8,h[0],v[2]);
+    }
+    if(hn==3 && vn==1 && dn==3)
+    {
+        toggle_bit(Data,8,h[0],v[0]);
+        toggle_bit(Data,8,h[1],v[0]);
+        toggle_bit(Data,8,h[2],v[0]);
+    }
+    if(hn==3 && vn==3 && dn==1)
+    {
+        toggle_bit(Data,8,h[2],v[0]);
+        toggle_bit(Data,8,h[1],v[1]);
+        toggle_bit(Data,8,h[0],v[2]);
+    }
+    if(hn==3&&vn==3&&dn==3&&(d[0]==h[0]+v[0])&&(d[1]==h[1]+v[1])&&(d[2]==h[2]+v[2]))
+    {
+        toggle_bit(Data,8,h[0],v[0]);
+        toggle_bit(Data,8,h[1],v[1]);
+        toggle_bit(Data,8,h[2],v[2]);
+    }
+
+    return 1;
+}
+
 int16_t find_position(int16_t a, int16_t *ptr)
 {
     int16_t i;
     int16_t index = 1;
-    for (i = 0; i < 16; i++)
+    for(i=0; i<16; i++)
     {
-        if (a & index)
-        { // Check the bit value at index position
-            *ptr = i;
+        if(a & index)
+        {
+            *ptr=i;
             ptr++;
         }
-        index = index << 1;
+        index = index <<1;
     }
-    return 0;
 }
 void initialize(int16_t *pt, int16_t size)
 {
     int16_t i;
-    for (i = 0; i < size; i++)
+    for(i=0; i<size; i++)
     {
-        *pt = -1;
+        *pt=-1;
         pt++;
     }
 }
+
 int16_t count_errors(int16_t a)
-{ // Simply calculates number of ones in ’a’
+{
     int16_t i;
     int16_t index = 1;
     int16_t count = 0;
-    for (i = 0; i < 16; i++)
+
+    for(i=0; i<16; i++)
     {
-        if (a & index)
-        { // Check the bit value at index position
-            count = count + 1;
+        if(a & index)
+        {
+            count=count+1;
         }
-        index = index << 1;
+        index = index <<1;
     }
     return count;
 }
 
+void toggle_bit(int16_t *pt,int16_t len,int16_t i,int16_t j)
+{
+    if(i<len)
+    {
+        pt[i] ^= 1UL << (j);
+    }
+}
+
+void scrubbing_parity_generation(int16_t Data[8],int8_t stage,int8_t index )
+{
+    int16_t h[8],v[8],d[16];
+
+    initialize(h,8);
+    initialize(v,8);
+    initialize(d,16);
+    if(stage == 0)
+    {
+
+        parity_.h1[index]=Calc_HParity(Data);
+        parity_.v1[index]=Calc_VParity(Data);
+        parity_.d1[index]=Calc_DParity(Data);
+
+    }
+    else if (stage == 1)
+    {
+        parity_.h2[index]=Calc_HParity(Data);
+        parity_.v2[index]=Calc_VParity(Data);
+        parity_.d2[index]=Calc_DParity(Data);
+    }
+    else
+    {
+
+    }
+}
+
+void setScrubParity( uint8_t* index_pointer, uint8_t index_struct )
+{
+    uint8_t i,j;
+    uint8_t *pointer = (uint8_t*)index_pointer;
+    for ( i = 0; i<index_struct ; ++i){
+        int16_t Data_memory_control[8]={0};
+        for ( j=0; j<8; j++ )
+        {
+            Data_memory_control[j]=(int16_t)*pointer;
+            pointer++;
+        }
+        scrubbing_parity_generation(Data_memory_control,0,i);
+    }
+}
+
+int8_t scrub_recovery( uint8_t* index_pointer, uint8_t index_struct )
+{
+    uint8_t i,j;
+    uint8_t return_value=0;
+    uint8_t *pointer;
+    int16_t Data_memory_control[8];
+    pointer=(uint8_t*)(index_pointer);
+    for ( i = 0; i<index_struct ; ++i){
+        for ( j=0; j<8; j++ )
+        {
+            Data_memory_control[j]=pointer[8*i+j];
+        }
+        scrubbing_parity_generation(Data_memory_control,1,i);
+        int result = scrubbing_bytes(Data_memory_control,i);
+        if(result==1)
+        {
+
+            for ( j=0; j<8; j++ )
+            {
+
+                pointer[j+8*i]=Data_memory_control[j];
+            }
+            return_value+=1;
+        }
+    }
+
+    return return_value;
+}
+
+void backupInPersistentRam (uint8_t* persistentStartingPointer,
+        uint8_t* memoryStartingPointer,
+        uint32_t length){
+    int i  = 0;
+    for (  i = 0 ; i<length; ++i){
+        persistentStartingPointer[i]=memoryStartingPointer[i];
+    }
+    ramBackup_.isPersistentRamWritten = 0xff;
+}
+
+
+void restoreFromPersistentRam (uint8_t* persistentStartingPointer,
+        uint8_t* memoryStartingPointer,
+        uint32_t length){
+    int i = 0;
+    for (  i = 0 ; i<length; ++i){
+        memoryStartingPointer[i]=persistentStartingPointer[i];
+    }
+}
+
+uint8_t cleanPersistentRam(uint16_t *byteElements, uint32_t size){
+    int i;
+    for ( i = 0;i< PERSISTENT_RAM_LENGTH; ++i) {
+        ramBackup_.persistentRam[i] = 0;
+    }
+    ramBackup_.isPersistentRamWritten = 0;
+    int j;
+    for ( j = 0 ; j < PERSISTENT_RAM_LENGTH / 8 ; ++j){
+        parity_.h1[j] = 0;
+        parity_.v1[j] = 0;
+        parity_.d1[j] = 0;
+        parity_.h2[j] = 0;
+        parity_.v2[j] = 0;
+        parity_.d2[j] = 0;
+    }
+    return 0;
+}
 \end{lstlisting}
 \clearpage
 
@@ -2915,7 +3046,7 @@ Lo stesso funzionamento è replicato nel caso del controllo delle memorie flash 
 \subsection{Codice sorgente dell'algoritmo di autodiagnosi}
 Di seguito è fornito l'implementazione dell'algoritmo di autodiagnosi in codice C:
 
-selfDiag.h
+selfDiag.h:
 \begin{lstlisting}[language=c][fontsize=\small]
 #ifndef INCLUDE_SELFDIAG_H_
 #define INCLUDE_SELFDIAG_H_
@@ -2960,10 +3091,9 @@ selfDiag.h
 #define DS1775_FPGA_STD_CONFIG          0x60
 
 
-//Codifica della priorita di autodiagnosi
-// Il byte che manterrà l'informazione avrà dunque la seguente struttura:
-// 0b xxxx xxxx ---> Ogni singolo bit (tranne il secondo che non è utilizzato)
-// avrà la seguente logica:
+//Codifica della prioritÃ  di autodiagnosi
+// Il byte che manterrà l'informazione ha dunque la seguente struttura:
+//  0b xxxx xxxx ---> Ogni singolo bit (tranne il secondo che non Ã¨ utilizzato) avrÃ  la seguente logica:
 //                    0 -> Sensore funzionante
 //                    1 -> Sensore non funzionante
 //
@@ -2984,7 +3114,7 @@ selfDiag.h
 #define FLASH_IDEN_BYTE_2 0x18
 
 
-#pragma PERSISTENT(PersistentRam)
+//#pragma PERSISTENT(PersistentRam)
 struct DiagnosticFlags
 {
         uint8_t I2CFlag;                           
@@ -2998,10 +3128,8 @@ struct DiagnosticFlags
         uint8_t flashFlag;
         uint8_t fpgaTemperatureSensorSecondFlag;
         uint8_t cpuTemperatureSensorSecondFlag;		
+}diagnosticFlags;
 
-
-//DiagnosticFlags diagnosticFlags;
-//Funzioni che controllano il funzionamento di ogni singolo sensore
 uint8_t     checkAccelerometerId(uint8_t* flag);
 uint8_t     checkGyroscopeId(uint8_t* flag);
 uint8_t     checkMagnetometerId(uint8_t* flag);
@@ -3017,17 +3145,17 @@ void        checkFlashMemoryId(uint8_t* flag);
 
 
 /*Funzione che permette di valutare la maggioranza di 0 o 1 all'interno di un byte.
-* In questo la corruzione di pochi bit non inficia sulla valutazione 
-* del valore della flag
+* In questo la corruzione di pochi bit non inficia sulla valutazione del valore della flag
+*
 * Esempio:
 * Flag_x=0xff;   => 0b 1111 1111
 * Tramite una corruzione vedo:
 * Flag_x=0x3f;   => 0b 0011 1111
 * La funzione decide per flag=1 correttamente
-* soltanto 5 corruzione o più di fatto mi danno un valore sbagliato.
+* soltanto 5 corruzione o piï¿½ di fatto mi danno un valore sbagliato.
 *
 */
-uint8_t majorityDecisionByte(uint8_t value);
+uint8_t     majorityDecisionByte(uint8_t value);
 
 
 void sensorDiag(void);
@@ -3038,12 +3166,12 @@ int8_t selfDiagInit();
 
 
 
+
 #endif /* INCLUDE_SELFDIAG_H_ */
 \end{lstlisting}
-\newline
 
-selfDiag.h:
 
+selfDiag.c:
 \begin{lstlisting}[language=c][fontsize=\small]
 #include "selfDiag.h"
 #include "abacus.h"
@@ -3055,92 +3183,136 @@ selfDiag.h:
  * flag=0 significa funzionante
  * flag=1 significa da escludere direttamente all'avvio
  *
-*/
+ */
 
 
-
+uint8_t     majorityDecisionByte(uint8_t value){
+    uint8_t result = 0;
+    uint8_t counter = 0;
+    uint8_t bit = 0;
+    uint8_t mask;
+    uint8_t i;
+    for(i=0;i<8;++i) {
+        mask = 1<<i;
+        bit = value & mask;
+        if( bit != 0x0 ) {
+            ++counter;
+        }
+    }
+    if(counter>3){
+        result = 0xff;
+    }
+    return result;
+}
 
 /*raises flag for non functional sensors*/
 void sensorDiag(void)
 {
     uint8_t counter=0;
+    if ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 )
+    {
 
-    if(majorityDecisionByte(diagnosticFlags.accelerometerSensorFlag) == 0x0) 
-    {
-        counter+=checkAccelerometerId(&diagnosticFlags.accelerometerSensorFlag);
-    }
-    else
-    {
-        //Se riscontro un flag alta, per sicurezza escludo il sensore
-        abacus_sensors_acc_power_off();
-    }
 
-    if(majorityDecisionByte(diagnosticFlags.gyroscopeSensorFlag)==0x0)
-    {
-        counter+=checkGyroscopeId(&diagnosticFlags.gyroscopeSensorFlag);
-    }
-    else
-    {
-        abacus_sensors_gyro_power_off();
-    }
+        // Prima di controllare ogni singolo sensore, ad ogni iterazione si esegue un controllo sul bus I2C condiviso tra tutti i sottosistemi interrogati.
+        // Questo evita il ricontrollo del bus I2C e di conseguenza un possibile overflow al contatore (verrebbe sommato per n volte 0x80
+        // Evito per sicurezza il controllo dei sensori e li disabilito a priori nel caso in cui il bus non sia funzionante
 
-    if(majorityDecisionByte(diagnosticFlags.magnetometerSensorFlag)==0x0)
-    {
-        counter+=checkMagnetometerId(&diagnosticFlags.magnetometerSensorFlag);
-    }
-    else
-    {
-        abacus_sensors_magnetometer_power_off();
-    }
-
-    if(majorityDecisionByte(diagnosticFlags.cpuTemperatureSensorFlag)==0x0)
-    {
-        counter+=checkTempCpuId(&diagnosticFlags.cpuTemperatureSensorFlag);
-    }
-    else
-    {
-        if(majorityDecisionByte(diagnosticFlags.cpuTemperatureSensorSecondFlag)==0x0)
+        if( ( majorityDecisionByte(diagnosticFlags.accelerometerSensorFlag) == 0x0) )
         {
-            counter+=checkTempCpuId(&diagnosticFlags.cpuTemperatureSensorSecondFlag);
+            counter+=checkAccelerometerId(&diagnosticFlags.accelerometerSensorFlag);
         }
         else
         {
-            abacus_sensors_temperatureCPU_power_off();
+            //Se riscontro un flag alta, per sicurezza escludo il sensore
+            abacus_sensors_acc_power_off();
         }
-    }
 
-    if(majorityDecisionByte(diagnosticFlags.fpgaTemperatureSensorFlag)==0x0)
-    {
-        counter+=checkTempFpgaId(&diagnosticFlags.fpgaTemperatureSensorFlag);
-    }
-    else
-    {
-        if(majorityDecisionByte(diagnosticFlags.fpgaTemperatureSensorSecondFlag)==0x0)
+
+        /********************/
+        if( (majorityDecisionByte(diagnosticFlags.gyroscopeSensorFlag)==0x0) )
         {
-            counter+=checkTempFpgaId(&diagnosticFlags.fpgaTemperatureSensorSecondFlag);
+            counter+=checkGyroscopeId(&diagnosticFlags.gyroscopeSensorFlag);
         }
         else
         {
-            abacus_sensors_temperatureFPGA_power_off();
+            abacus_sensors_gyro_power_off();
+        }
+
+        /*******************/
+        if( ( majorityDecisionByte(diagnosticFlags.magnetometerSensorFlag)==0x0)  && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+        {
+            counter+=checkMagnetometerId(&diagnosticFlags.magnetometerSensorFlag);
+        }
+        else
+        {
+            abacus_sensors_magnetometer_power_off();
+        }
+        /*******************/
+        if( ( majorityDecisionByte(diagnosticFlags.cpuTemperatureSensorFlag)==0x0)  && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+        {
+            counter+=checkTempCpuId(&diagnosticFlags.cpuTemperatureSensorFlag);
+        }
+        else
+        {
+            if( (majorityDecisionByte(diagnosticFlags.cpuTemperatureSensorSecondFlag)==0x0)  && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+            {
+                counter+=checkTempCpuId(&diagnosticFlags.cpuTemperatureSensorSecondFlag);
+            }
+            else
+            {
+                abacus_sensors_temperatureCPU_power_off();
+            }
+        }
+        /********************/
+        if( ( majorityDecisionByte(diagnosticFlags.fpgaTemperatureSensorFlag)==0x0) && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+        {
+            counter+=checkTempFpgaId(&diagnosticFlags.fpgaTemperatureSensorFlag);
+        }
+        else
+        {
+            if( ( majorityDecisionByte(diagnosticFlags.fpgaTemperatureSensorSecondFlag)==0x0) && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+            {
+                counter+=checkTempFpgaId(&diagnosticFlags.fpgaTemperatureSensorSecondFlag);
+            }
+            else
+            {
+                abacus_sensors_temperatureFPGA_power_off();
+            }
+        }
+
+        if( ( majorityDecisionByte(diagnosticFlags.rtcFlag)==0x0) && ( majorityDecisionByte(diagnosticFlags.I2CFlag) == 0x0 ) )
+        {
+            counter+=checkRtcId(&diagnosticFlags.rtcFlag);
         }
     }
-
-    if(majorityDecisionByte(diagnosticFlags.rtcFlag)==0x0)
+    else
     {
-        counter+=checkRtcId(&diagnosticFlags.rtcFlag);
+        counter = 0xff;
+        diagnosticFlags.accelerometerSensorFlag = 0xff;
+        diagnosticFlags.I2CFlag = 0xff;
+        diagnosticFlags.accelerometerSensorFlag  = 0xff;
+        diagnosticFlags.gyroscopeSensorFlag  = 0xff;
+        diagnosticFlags.magnetometerSensorFlag = 0xff;
+        diagnosticFlags.fpgaTemperatureSensorFlag  = 0xff;
+        diagnosticFlags.cpuTemperatureSensorFlag = 0xff;
+        diagnosticFlags.rtcFlag = 0xff;
+        diagnosticFlags.fpgaTemperatureSensorSecondFlag = 0xff;
+        diagnosticFlags.cpuTemperatureSensorSecondFlag = 0xff;
     }
 
-    if(counter > AUTO_RTC_RETURN_VALUE)
+    if(counter > 0x8)
     {                                             
         WDTCTL = 0xDEAD;
     }
+
+
 }
 
 
 /*check for the memory issues and implement appropriate routines*/
 void memoryDiag(void)
 {
-    
+    //Da completare
     if(majorityDecisionByte(diagnosticFlags.flashFlag)==0x0)
     {
         checkFlashMemoryId(&diagnosticFlags.flashFlag);
@@ -3149,80 +3321,63 @@ void memoryDiag(void)
 }
 
 /*
- * Ogni richiesta di controllo del determinato sensore 
- * avviene tramite protocollo I2C. Questo protocollo 
- * si svolge in due parti: prima si richiede la 
- * determinata risorsa, poi il sensore ris
- * ponde alla determinata richiesta. Ciò non avviene sempre 
- * e qualcosa può andare storto (sensore rotto, 
- * bus I2C non funzionante). Per evitare che il 
- * codice si blocchi imponiamo quindi un
- * tempo limite di risposta, pari ad un numero precisato 
- * di operazioni. Se il contatore raggiunge il 
- * limite, significa che il bus non risponde e 
- * di conseguenza bisogna supporre che entrambe
- * le risorse (sensore e bus) non sono utilizzabili. 
- * In tal caso le flag a byte rimangono alte e dopo un 
- * software reset obbligato le risorse vengono 
- * escluse o il problema viene risolto.
- * Come ultima spiaggia abbiamo inoltre attivato
- * il watchdog timer che ci permette di non bloccare 
- * il codice nel caso in cui tutta la procedura venga
- * bloccata da un evento inaspettato.
-*/
+ * Ogni richiesta di controllo del determinato sensore avviene tramite protocollo I2C. Questo protocollo si svolge in due parti: prima si richiede la determinata risorsa, poi il sensore ris
+ * ponde alla determinata richiesta. Ciï¿½ non avviene sempre e qualcosa puï¿½ andare storto (sensore rotto, bus I2C non funzionante). Per evitare che il codice si blocchi imponiamo quindi un
+ * tempo limite di risposta, pari ad un numero precisato di operazioni. Se il contatore raggiunge il limite, significa che il bus non risponde e di conseguenza bisogna supporre che entrambe
+ * le risorse (sensore e bus) non sono utilizzabili. In tal caso le flag a byte rimangono alte e dopo un software reset obbligato le risorse vengono escluse o il problema viene risolto.
+ * Come ultima spiaggia abbiamo inoltre attivato il watchdog timer che ci permette di non bloccare il codice nel caso in cui tutta la procedura venga bloccata da un evento inaspettato.
+ *
+ *
+ *
+ */
 uint8_t checkAccelerometerId(uint8_t* flag)
 {
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
-        
-        *flag=0xFF;
-        diagnosticFlags.I2CFlag=0xFF;
-
-        uint8_t counter=0;
-        uint8_t result=0;
-
- /*
-**  Una volta appurato che il bus I2C risponde 
-**  e ci fornisce la determinata risorsa, 
-**  bisogna valutare che i registri non siano corrotti.
-**  Per Fare ciò esiste un registro dedicato 
-** nella maggior parte dei sensori chiamato "
-**  Device ID" che ci permette di leggere il nome del sensore.
-**  Se ciò non avviene correttamente, il registro è corrotto.
-**  Nel caso in cui il registro non sia corrotto andiamo 
-** poi ad indagare il registro di configurazione, il quale deve 
-** essere impostato secondo un determinato valore
-**  esadecimale (già deciso a priori). Se ciò non avviene significa che qualcosa è
-**  cambiato e ciò è inaspettato. In tale caso, 
-** andiamo a resettare le impostazioni del sensore.
-*/
 
 
-    while( ( result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_ACC, ADXL345DEVID) ) == 0x00)
+
+    //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+    *flag=0xFF;
+    diagnosticFlags.I2CFlag=0xFF;
+
+    uint8_t counter=0;
+    uint8_t result=0;
+
+    /*
+     **  Una volta appurato che il bus I2C risponde e ci fornisce la determinata risorsa, bisogna valutare che i registri non siano corrotti.
+     **  Per Fare ciï¿½ vi ï¿½ un registro dedicato nella maggior parte dei sensori chiamato "Device ID" che ci permette di leggere il nome del sensore.
+     **  Se ciï¿½ non avviene correttamente, il registro ï¿½ corrotto.
+     **  Nel caso in cui il registro non sia corrotto andiamo poi ad indagare il registro di configurazione, il quale deve essere impostato secondo un determinato valore
+     **  esadecimale (giï¿½ deciso a priori). Se ciï¿½ non avviene significa che qualcosa ï¿½ cambiato e ciï¿½ ï¿½ inaspettato.
+     **  In tale caso, andiamo a resettare le impostazioni del sensore.
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
+
+
+    while( ( result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_ACC, ADXL345DEVID) ) == 0x00)
     {
         counter++;
-        if(counter > 30000)  
+
+        if(counter > 30000)             //i2c is not responding, power reset, so i both acc and i2c not working to be sure
         {
-            return AUTO_ACC_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
-        /*
-        *
-        * Il valore dipende dalla priorità con cui bisogna risolvere 
-        * il problema: questo identifica che sia il 
-        * bus IC che l'accelerometro sono non funzionanti:
-        *
-        * 0b1000 0000 + 0b0000 0001 = 0b1000 0001 = 129
-        *  I2C fault     acc FAULT
-        *
-        *
-        *
-        */
+            result = AUTO_ACC_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+            /*
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0000 0001 = 0b1000 0001 = 129
+             *  I2C fault     acc FAULT
+             *
+             *
+             *
+             */
         }
     }
 
     diagnosticFlags.I2CFlag=0x00;
 
-    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_ACC, 
-    ADXL345CONFIGREG)!=ADXL345_STD_CONFIG)
+    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_ACC, ADXL345CONFIGREG)!=ADXL345_STD_CONFIG)
     {
         //Calibra il sensore
         abacus_sensors_acc_init();
@@ -3230,42 +3385,34 @@ uint8_t checkAccelerometerId(uint8_t* flag)
 
     if(result==AB_ADDRESS_ACC_ID)
     {
-                *flag=0x00;  //both sensor and i2c working, return is 0
-                return 0;
+        *flag=0x00;  //both sensor and i2c working, return is 0
+        result = 0;
     }
     else
     {
         *flag=0xff;  //only sensor not working, return 1
-        return AUTO_ACC_RETURN_VALUE;
+        result = AUTO_ACC_RETURN_VALUE;
     }
 
+    return result;
+
 }
+
 
 uint8_t checkGyroscopeId(uint8_t* flag)
 {
     diagnosticFlags.gyroscopeSensorFlag=0xff;
-/*
- * Ogni richiesta di controllo del determinato sensore 
- * avviene tramite protocollo I2C. Questo protocollo 
- * si svolge in due parti: prima si richiede la 
- * determinata risorsa, poi il sensore ris
- * ponde alla determinata richiesta. Ciò non avviene sempre 
- * e qualcosa può andare storto (sensore rotto, 
- * bus I2C non funzionante). Per evitare che il 
- * codice si blocchi imponiamo quindi un
- * tempo limite di risposta, pari ad un numero precisato 
- * di operazioni. Se il contatore raggiunge il 
- * limite, significa che il bus non risponde e 
- * di conseguenza bisogna supporre che entrambe
- * le risorse (sensore e bus) non sono utilizzabili. 
- * In tal caso le flag a byte rimangono alte e dopo un 
- * software reset obbligato le risorse vengono 
- * escluse o il problema viene risolto.
- * Come ultima spiaggia abbiamo inoltre attivato
- * il watchdog timer che ci permette di non bloccare 
- * il codice nel caso in cui tutta la procedura venga
- * bloccata da un evento inaspettato.
-*/
+    /*
+     * Ogni richiesta di controllo del determinato sensore avviene tramite protocollo I2C. Questo protocollo si svolge in due parti: prima si richiede la determinata risorsa, poi il sensore ris
+     * ponde alla determinata richiesta. Ciï¿½ non avviene sempre e qualcosa puï¿½ andare storto (sensore rotto, bus I2C non funzionante). Per evitare che il codice si blocchi imponiamo quindi un
+     * tempo limite di risposta, pari ad un numero precisato di operazioni. Se il contatore raggiunge il limite, significa che il bus non risponde e di conseguenza bisogna supporre che entrambe
+     * le risorse (sensore e bus) non sono utilizzabili. In tal caso le flag a byte rimangono alte e dopo un software reset obbligato le risorse vengono escluse o il problema viene risolto.
+     * Come ultima spiaggia abbiamo inoltre attivato il watchdog timer che ci permette di non bloccare il codice nel caso in cui tutta la procedura venga bloccata da un evento inaspettato.
+     *
+     *
+     *
+     */
+
 
     WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
     *flag=0xFF;
@@ -3274,86 +3421,82 @@ uint8_t checkGyroscopeId(uint8_t* flag)
     uint8_t counter=0;
     uint8_t result=0;
 
- /*
-**  Una volta appurato che il bus I2C risponde 
-**  e ci fornisce la determinata risorsa, 
-**  bisogna valutare che i registri non siano corrotti.
-**  Per Fare ciò esiste un registro dedicato 
-** nella maggior parte dei sensori chiamato "
-**  Device ID" che ci permette di leggere il nome del sensore.
-**  Se ciò non avviene correttamente, il registro è corrotto.
-**  Nel caso in cui il registro non sia corrotto andiamo 
-** poi ad indagare il registro di configurazione, il quale deve 
-** essere impostato secondo un determinato valore
-**  esadecimale (già deciso a priori). Se ciò non avviene significa che qualcosa è
-**  cambiato e ciò è inaspettato. In tale caso, 
-** andiamo a resettare le impostazioni del sensore.
-*/
 
-                
-    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_GYRO2014, L3G4200_DEVID))==0x00)
+    /*
+     **  Una volta appurato che il bus I2C risponde e ci fornisce la determinata risorsa, bisogna valutare che i registri non siano corrotti.
+     **  Per Fare ciï¿½ vi ï¿½ un registro dedicato nella maggior parte dei sensori chiamato "Device ID" che ci permette di leggere il nome del sensore.
+     **  Se ciï¿½ non avviene correttamente, il registro ï¿½ corrotto.
+     **  Nel caso in cui il registro non sia corrotto andiamo poi ad indagare il registro di configurazione, il quale deve essere impostato secondo un determinato valore
+     **  esadecimale (giï¿½ deciso a priori). Se ciï¿½ non avviene significa che qualcosa ï¿½ cambiato e ciï¿½ ï¿½ inaspettato.
+     **  In tale caso, andiamo a resettare le impostazioni del sensore.
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
+    //MPU9250_WHO_AM_I         0x75 // Should return 0x71
+
+    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_GYRO2014, L3G4200_DEVID))==0x00)
     {
         counter++;
-        if(counter > 30000)            
+        if(counter > 30000)             //i2c is not responding, i reset, so i set both acc and i2c not working to be sure
         {
-            return AUTO_GYR_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+
+            result = AUTO_GYR_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
             /*
-            * 0b1000 0000 + 0b0000 0010 = 0b1000 0010 = 130
-            *  I2C fault     gyro FAULT
-            *
-            */
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0000 0010 = 0b1000 0010 = 130
+             *  I2C fault     acc FAULT
+             *
+             *
+             *
+             */
         }
     }
 
-
-    diagnosticFlags.I2CFlag=0x00; 
-    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_GYRO2013, 
-    L3G4200CONFIGREG)!=L3G4200_STD_CONFIG)
-        {
-            //Calibra il sensore
-            abacus_sensors_gyro_init(AB_ABACUSVERSION2014);
-        }
+    /*
+     *
+     * Vado quindi a controllare il valore di configurazione del sensore, se ciï¿½ non va bene, richiamo la funzione di calibrazione
+     * del determinato sensore
+     *
+     *
+     *
+     */
+    diagnosticFlags.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
+    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_GYRO2013, L3G4200CONFIGREG)!=L3G4200_STD_CONFIG)
+    {
+        //Calibra il sensore
+        abacus_sensors_gyro_init(AB_ADDRESS_GYRO2014);
+    }
 
     if(result==AB_ADDRESS_GYR_ID )
     {
         *flag=0x00;   //both sensor and i2c working, return is 0
-        return 0;
+        result = 0;
     }
     else
     {
         *flag=0xff;   //only sensor not working, return 2
-        return AUTO_GYR_RETURN_VALUE;
+        result = AUTO_GYR_RETURN_VALUE;
     }
-
+    return result;
 }
 
 
 uint8_t checkMagnetometerId(uint8_t* flag)
 {
 
-/*
- * Ogni richiesta di controllo del determinato sensore 
- * avviene tramite protocollo I2C. Questo protocollo 
- * si svolge in due parti: prima si richiede la 
- * determinata risorsa, poi il sensore ris
- * ponde alla determinata richiesta. Ciò non avviene sempre 
- * e qualcosa può andare storto (sensore rotto, 
- * bus I2C non funzionante). Per evitare che il 
- * codice si blocchi imponiamo quindi un
- * tempo limite di risposta, pari ad un numero precisato 
- * di operazioni. Se il contatore raggiunge il 
- * limite, significa che il bus non risponde e 
- * di conseguenza bisogna supporre che entrambe
- * le risorse (sensore e bus) non sono utilizzabili. 
- * In tal caso le flag a byte rimangono alte e dopo un 
- * software reset obbligato le risorse vengono 
- * escluse o il problema viene risolto.
- * Come ultima spiaggia abbiamo inoltre attivato
- * il watchdog timer che ci permette di non bloccare 
- * il codice nel caso in cui tutta la procedura venga
- * bloccata da un evento inaspettato.
-*/
+    /*
+     * Ogni richiesta di controllo del determinato sensore avviene tramite protocollo I2C. Questo protocollo si svolge in due parti: prima si richiede la determinata risorsa, poi il sensore ris
+     * ponde alla determinata richiesta. Ciï¿½ non avviene sempre e qualcosa puï¿½ andare storto (sensore rotto, bus I2C non funzionante). Per evitare che il codice si blocchi imponiamo quindi un
+     * tempo limite di risposta, pari ad un numero precisato di operazioni. Se il contatore raggiunge il limite, significa che il bus non risponde e di conseguenza bisogna supporre che entrambe
+     * le risorse (sensore e bus) non sono utilizzabili. In tal caso le flag a byte rimangono alte e dopo un software reset obbligato le risorse vengono escluse o il problema viene risolto.
+     * Come ultima spiaggia abbiamo inoltre attivato il watchdog timer che ci permette di non bloccare il codice nel caso in cui tutta la procedura venga bloccata da un evento inaspettato.
+     *
+     *
+     *
+     */
 
 
     WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
@@ -3362,42 +3505,52 @@ uint8_t checkMagnetometerId(uint8_t* flag)
 
     uint8_t counter=0;
     uint8_t result=0;
-    
- /*
-**  Una volta appurato che il bus I2C risponde 
-**  e ci fornisce la determinata risorsa, 
-**  bisogna valutare che i registri non siano corrotti.
-**  Per Fare ciò esiste un registro dedicato 
-** nella maggior parte dei sensori chiamato "
-**  Device ID" che ci permette di leggere il nome del sensore.
-**  Se ciò non avviene correttamente, il registro è corrotto.
-**  Nel caso in cui il registro non sia corrotto andiamo 
-** poi ad indagare il registro di configurazione, il quale deve 
-** essere impostato secondo un determinato valore
-**  esadecimale (già deciso a priori). Se ciò non avviene significa che qualcosa è
-**  cambiato e ciò è inaspettato. In tale caso, 
-** andiamo a resettare le impostazioni del sensore.
-*/
+    /*
+     **  Una volta appurato che il bus I2C risponde e ci fornisce la determinata risorsa, bisogna valutare che i registri non siano corrotti.
+     **  Per Fare ciï¿½ vi ï¿½ un registro dedicato nella maggior parte dei sensori chiamato "Device ID" che ci permette di leggere il nome del sensore.
+     **  Se ciï¿½ non avviene correttamente, il registro ï¿½ corrotto.
+     **  Nel caso in cui il registro non sia corrotto andiamo poi ad indagare il registro di configurazione, il quale deve essere impostato secondo un determinato valore
+     **  esadecimale (giï¿½ deciso a priori). Se ciï¿½ non avviene significa che qualcosa ï¿½ cambiato e ciï¿½ ï¿½ inaspettato.
+     **  In tale caso, andiamo a resettare le impostazioni del sensore.
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
 
-    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_MAGNETOMETER, HMC5883IDREG_A))==0x00)
+    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_MAGNETOMETER, HMC5883IDREG_A))==0x00)
     {
         counter++;
-        if(counter > 30000)             
+        if(counter > 30000)             //i2c is not responding, i reset, so i set both acc and i2c not working to be sure
         {
-            return AUTO_MAG_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
-                    /*
-                     * 0b1000 0000 + 0b0000 0100 = 0b1000 0100 = 132
-                     *  I2C fault     mag FAULT
-                     */
+            result = AUTO_MAG_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+            /*
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0000 0100 = 0b1000 0100 = 132
+             *  I2C fault     acc FAULT
+             *
+             *
+             *
+             */
         }
     }
     //I2C replied with good timing, so is working, lets see if the ID is correct
 
     diagnosticFlags.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
 
-    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_MAGNETOMETER, 
-    HMC5883MODEREG)!=HMC5883_STD_CONFIG)
+
+    /*
+     *
+     * Vado quindi a controllare il valore di configurazione del sensore, se ciï¿½ non va bene, richiamo la funzione di calibrazione
+     * del determinato sensore
+     *
+     *
+     *
+     */
+
+    //Flag_Diagnostic_Part.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
+    if(abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_MAGNETOMETER, HMC5883MODEREG)!=HMC5883_STD_CONFIG)
     {
         //Calibra il sensore
         abacus_sensors_magnetometer_init();
@@ -3406,40 +3559,30 @@ uint8_t checkMagnetometerId(uint8_t* flag)
     if(result==HMC5883_DEVID)
     {
         *flag=0x00;  //both sensor and i2c working, return is 0
-        return 0;
+        result = 0;
     }
     else
     {
         *flag=0xff;  //only sensor not working, return 1
-            return AUTO_MAG_RETURN_VALUE;
+        result = AUTO_MAG_RETURN_VALUE;
     }
-
+    return result;
 }
 
 
 uint8_t checkRtcId(uint8_t* flag)
 {
 
-/*
- * Ogni richiesta di controllo del determinato sensore 
- * avviene tramite protocollo I2C. Questo protocollo 
- * si svolge in due parti: prima si richiede la determinata
- * risorsa, poi il sensore risponde alla determinata richiesta.
- * Ciò non avviene sempre e qualcosa può andare storto (sensore rotto, 
- * bus I2C non funzionante). Per evitare che il codice si blocchi 
- * imponiamo quindi un tempo limite di risposta, pari ad un numero 
- * precisato di operazioni. Se il contatore raggiunge il 
- * limite, significa che il bus non risponde e di 
- * conseguenza bisogna supporre che entrambe
- * le risorse (sensore e bus) non sono utilizzabili. 
- * In tal caso le flag a byte rimangono alte e dopo un 
- * software reset obbligato le risorse vengono escluse o 
- * il problema viene risolto. Come ultima spiaggia abbiamo 
- *inoltre attivato il watchdog timer che ci permette di non bloccare 
- * il codice nel caso in cui tutta la procedura venga bloccata 
- * da un evento inaspettato.
-*/
-
+    /*
+     * Ogni richiesta di controllo del determinato sensore avviene tramite protocollo I2C. Questo protocollo si svolge in due parti: prima si richiede la determinata risorsa, poi il sensore ris
+     * ponde alla determinata richiesta. Ciï¿½ non avviene sempre e qualcosa puï¿½ andare storto (sensore rotto, bus I2C non funzionante). Per evitare che il codice si blocchi imponiamo quindi un
+     * tempo limite di risposta, pari ad un numero precisato di operazioni. Se il contatore raggiunge il limite, significa che il bus non risponde e di conseguenza bisogna supporre che entrambe
+     * le risorse (sensore e bus) non sono utilizzabili. In tal caso le flag a byte rimangono alte e dopo un software reset obbligato le risorse vengono escluse o il problema viene risolto.
+     * Come ultima spiaggia abbiamo inoltre attivato il watchdog timer che ci permette di non bloccare il codice nel caso in cui tutta la procedura venga bloccata da un evento inaspettato.
+     *
+     *
+     *
+     */
 
 
     WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
@@ -3449,69 +3592,80 @@ uint8_t checkRtcId(uint8_t* flag)
     uint16_t counter=0;
     uint8_t result=0;
 
+    /*
+     **  Una volta appurato che il bus I2C risponde e ci fornisce la determinata risorsa, bisogna valutare che i registri non siano corrotti.
+     **  Per Fare ciï¿½ vi ï¿½ un registro dedicato nella maggior parte dei sensori chiamato "Device ID" che ci permette di leggere il nome del sensore.
+     **  Se ciï¿½ non avviene correttamente, il registro ï¿½ corrotto.
+     **  Nel caso in cui il registro non sia corrotto andiamo poi ad indagare il registro di configurazione, il quale deve essere impostato secondo un determinato valore
+     **  esadecimale (giï¿½ deciso a priori). Se ciï¿½ non avviene significa che qualcosa ï¿½ cambiato e ciï¿½ ï¿½ inaspettato.
+     **  In tale caso, andiamo a resettare le impostazioni del sensore.
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
 
-
-    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_RTC, BQ32000CAL_CFG1))==0x00)
+    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_RTC, BQ32000CAL_CFG1))==0x00)
     {
         counter++;
-        if(counter > 30000)             
+        if(counter > 30000)             //i2c is not responding, i reset, so i set both acc and i2c not working to be sure
         {
-            return AUTO_RTC_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+            result = AUTO_RTC_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
 
-                    /*
-                     * 0b1000 0000 + 0b0000 1000 = 0b1000 1000 = 136
-                     *  I2C fault     RTC FAULT
-                    */
+            /*
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0000 1000 = 0b1000 1000 = 136
+             *  I2C fault     RTC FAULT
+             *
+             *
+             *
+             */
 
-               }
-            }
-
-    buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_RTC, BQ32000CAL_CFG1);
-
-    diagnosticFlags.I2CFlag=0x00; 
-    
+        }
+    }
+    /*
+     *
+                buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_RTC, BQ32000CAL_CFG1);
+                //I2C replied with good timing, so is working, lets see if the ID is correct
+     *
+     */
+    diagnosticFlags.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
     if(result==BQ32000_STD_CONFIG)
     {
         *flag=0x00;  //both sensor and i2c working, return is 0
-        return 0;
+        result = 0;
     }
     else
     {
-        *flag=0xff;  
-/*
-* L'RTC è uno strumento fondamentale per il funzionamento del sistema. B
-* Bisogna creare un sistema che lo escluda soltanto nel caso di guasto 
-* continuativo (anche se lo resetto). Questo potrebbe essere fatto
-* sfruttando la flag che ho alzato non come una semplice flag che esclude 
-* direttamente al reset, ma con un sistema più complesso come questo:
-* 1) Avvio abacus e l'RTC è certamente attivo e con la flag abbassata (a 0x0 )
-* 2) Se riscontro un problema, alzo la flag, reimposto l'RTC e rebootto.
-* 3) Al reboot riscontro la flag alta. Esiste però una seconda flag 
-* che tiene conto se il problema è perdurato e questa èancora bassa.
-*  Attivo quindi l'RTC e eseguo tutta la fase di autodiagnosi.
-* 4) Se non riscontro problemi, era un semplice problema di settaggi. 
-* Se riscontro nuovamente un problema (bus bloccato, config reg diverso)
-*  significa che il problema è perdurato. Attivo di conseguenza la 
-* seconda flag (Sensor_broken_flag) e rebootto.
-*  5) In questo caso tutte e due le flag sono attive e so che non devo attivare l'RTC
-*
-*  Ricapitolando:
-*  Ho due flag:
-*  a) Flag_Diagnostic_Part.RTCFlag
-*  b) Flag_Diagnostic_Part.RTCbrokenflag
-*
-*  Possibiliti combinazioni:
-*
-*  1) RTCFlag == 0 && RTCbrokenflag == 0 tutto funziona bene
-*  2) RTCFlag == 1 && RTCbrokenflag == 0 prima volta errore
-*  3) RTCFlag == 0 && RTCbrokenflag == 1 NON SUCCEDE MAI
-*  2) RTCFlag == 1 && RTCbrokenflag == 1 devo disattivare
-*/
-        abacus_RTC_init();                 
-        return AUTO_RTC_RETURN_VALUE;
+        *flag=0xff;  /*L'RTC ï¿½ uno strumento fondamentale per il funzionamento del sistema. Bisogna creare un sistema che
+        * lo escluda soltanto nel caso di guasto continuativo (anche se lo resetto). Questo potrebbe essere fatto
+        *  sfruttando la flag che ho alzato non come una semplice flag che esclude direttamente al reset, ma con un sistema
+        * piï¿½ complesso come questo:
+        * 1) Avvio abacus e l'RTC ï¿½ certamente attivo e con la flag abbassata (a 0x0 )
+        * 2) Se riscontro un problema, alzo la flag, reimposto l'RTC e rebootto.
+        * 3) Al reboot riscontro la flag alta. Esiste perï¿½ una seconda flag che tiene conto se il problema ï¿½ perdurato e questa ï¿½ ancora bassa.
+        *  Attivo quindi l'RTC e eseguo tutta la fase di autodiagnosi.
+        *  4) Se non riscontro problemi, era un semplice problema di settaggi. Se riscontro nuovamente un problema (bus bloccato, config reg diverso)
+        *  significa che il problema ï¿½ perdurato. Attivo di conseguenza la seconda flag (Sensor_broken_flag) e rebootto.
+        *  5) In questo caso tutte e due le flag sono attive e so che non devo attivare l'RTC
+        *
+        *  Ricapitolando:
+        *  HO due flag:
+        *  a) Flag_Diagnostic_Part.RTCFlag
+        *  b) Flag_Diagnostic_Part.RTCbrokenflag
+        *
+        *  Possibilitï¿½:
+        *
+        *  1) RTCFlag == 0 && RTCbrokenflag == 0 tutto funziona bene
+        *  2) RTCFlag == 1 && RTCbrokenflag == 0 riscontro per la prima volta un problema
+        *  3) RTCFlag == 0 && RTCbrokenflag == 1 NON SUCCEDE MAI, PERCHï¿½ IMPONGO CHE LA BROKEN FLAG SIA MODIFICABILE DOPO LA RTC FLAG
+        *  2) RTCFlag == 1 && RTCbrokenflag == 1 problema perdurato, devo disattivare l'RTC
+        */
+        abacus_RTC_init();                  // Non sono sicuro che calibri in maniera giusta. Nella libreria sembra resettare tutto al 1 gennaio 2000
+        result = AUTO_RTC_RETURN_VALUE;
     }
-
+    return result;
 }
 
 
@@ -3519,8 +3673,10 @@ uint8_t checkTempCpuId(uint8_t* flag)
 {
 
     /*
-     * Nel caso dei sensori di temperatura non esiste un device ID. 
-     * Di conseguenza possiamo controllare soltanto il registro di impostazione.
+     * Nel caso dei sensori di temperatura non esiste un device ID. DI conseguenza possiamo controllare soltanto il registro di impostazione
+     *
+     *
+     *
      */
 
 
@@ -3532,54 +3688,70 @@ uint8_t checkTempCpuId(uint8_t* flag)
     uint8_t result=0;
 
 
-    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG))==0x00)
+    /*
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
+
+    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG))==0x00)
     {
         counter++;
-        if(counter > 30000)             
+        if(counter > 30000)             //i2c is not responding, i reset, so i set both acc and i2c not working to be sure
         {
-         return AUTO_CPU_TEMP_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
-                    /*
-                     * 0b1000 0000 + 0b0010 0000 = 0b1010 0000 = 128+32 = 160
-                     *  I2C fault     FPGA temp FAULT
-                     */
+            result = AUTO_CPU_TEMP_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+            /*
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0010 0000 = 0b1010 0000 = 128+32 = 160
+             *  I2C fault     FPGA temp FAULT
+             *
+             *
+             *
+             */
         }
     }
-    
-    buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_TEMPCPU, DS1775CONFIGREG);
-
-    diagnosticFlags.I2CFlag=0x00;  
+    //buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_TEMPCPU, DS1775CONFIGREG);
+    //I2C replied with good timing, so is working, lets see if the ID is correct
+    diagnosticFlags.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
     if(result==DS1775_CPU_STD_CONFIG)
     {
         *flag=0x00;  //both sensor and i2c working, return is 0
-        return 0;
+        result = 0;
     }
     else
     {
-        *flag=0xff;
-/*
-
-*  Ricapitolando:
-*  Ho due flag:
-*  a) Flag_Diagnostic_Part.cpuTemperatureSensorFlag
-*  b) Flag_Diagnostic_Part.cpuTemperatureSensorSecondFlag
-*
-*  Possibiliti combinazioni:
-*
-*  1) cpuTemperatureSensorFlag == 0 
-*  && cpuTemperatureSensorSecondFlag == 0 tutto funziona bene
-*  2) cpuTemperatureSensorFlag == 1 
-*  && cpuTemperatureSensorSecondFlag == 0 prima volta errore
-*  3) cpuTemperatureSensorFlag == 0 
-*  && cpuTemperatureSensorSecondFlag == 1 NON SUCCEDE MAI
-*  4) cpuTemperatureSensorFlag == 1 
-*  && cpuTemperatureSensorSecondFlag == 1 devo disattivare
-*/
-        abacus_sensors_temperature_init(); 
-        return AUTO_CPU_TEMP_RETURN_VALUE;
+        *flag=0xff;  //Stesso discorso dell'RTC
+        /*L'RTC ï¿½ uno strumento fondamentale per il funzionamento del sistema. Bisogna creare un sistema che
+         * lo escluda soltanto nel caso di guasto continuativo (anche se lo resetto). Questo potrebbe essere fatto
+         *  sfruttando la flag che ho alzato non come una semplice flag che esclude direttamente al reset, ma con un sistema
+         * piï¿½ complesso come questo:
+         * 1) Avvio abacus e l'RTC ï¿½ certamente attivo e con la flag abbassata (a 0x0 )
+         * 2) Se riscontro un problema, alzo la flag, reimposto l'RTC e rebootto.
+         * 3) Al reboot riscontro la flag alta. Esiste perï¿½ una seconda flag che tiene conto se il problema ï¿½ perdurato e questa ï¿½ ancora bassa.
+         *  Attivo quindi l'RTC e eseguo tutta la fase di autodiagnosi.
+         *  4) Se non riscontro problemi, era un semplice problema di settaggi. Se riscontro nuovamente un problema (bus bloccato, config reg diverso)
+         *  significa che il problema ï¿½ perdurato. Attivo di conseguenza la seconda flag (Sensor_broken_flag) e rebootto.
+         *  5) In questo caso tutte e due le flag sono attive e so che non devo attivare l'RTC
+         *
+         *  Ricapitolando:
+         *  HO due flag:
+         *  a) Flag_Diagnostic_Part.RTCFlag
+         *  b) Flag_Diagnostic_Part.RTCbrokenflag
+         *
+         *  Possibilitï¿½:
+         *
+         *  1) RTCFlag == 0 && RTCbrokenflag == 0 tutto funziona bene
+         *  2) RTCFlag == 1 && RTCbrokenflag == 0 riscontro per la prima volta un problema
+         *  3) RTCFlag == 0 && RTCbrokenflag == 1 NON SUCCEDE MAI, PERCHï¿½ IMPONGO CHE LA BROKEN FLAG SIA MODIFICABILE DOPO LA RTC FLAG
+         *  2) RTCFlag == 1 && RTCbrokenflag == 1 problema perdurato, devo disattivare l'RTC
+         */
+        abacus_sensors_temperature_init(); //Vado a ricalibrare entrambi i sensori di temperatura. Potrei anche generare una funzione che calibri soltanto
+        //uno dei sensori di temperatura
+        result = AUTO_CPU_TEMP_RETURN_VALUE;
     }
-
+    return result;
 }
 
 
@@ -3587,9 +3759,12 @@ uint8_t checkTempCpuId(uint8_t* flag)
 
 uint8_t checkTempFpgaId(uint8_t* flag)
 {
+
     /*
-     * Nel caso dei sensori di temperatura non esiste un device ID. 
-     * Di conseguenza possiamo controllare soltanto il registro di impostazione.
+     * Nel caso dei sensori di temperatura non esiste un device ID. DI conseguenza possiamo controllare soltanto il registro di impostazione
+     *
+     *
+     *
      */
 
 
@@ -3600,59 +3775,70 @@ uint8_t checkTempFpgaId(uint8_t* flag)
     uint16_t counter=0;
     uint8_t result=0;
 
+    /*
+     **
+     **  SINTASSI DELLA RICHIESTA I2C DI LETTURA DI UN REGISTRO:
+     **    while(uint8_t abacus_i2c_readRegister(uint8_t busSelect,uint8_t address, uint8_t reg)
+     */
 
-    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG))==0x00)
+    while((result = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG))==0x00)
     {
         counter++;
-        if(counter > 30000)             
+        if(counter > 30000)             //i2c is not responding, i reset, so i set both acc and i2c not working to be sure
         {
-            return AUTO_CPU_TEMP_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
-/*
- *
- * Il valore dipende dalla priorità con cui bisogna risolvere il problema: 
- * questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
- *
- * 0b1000 0000 + 0b0010 0000 = 0b1010 0000 = 128+32 = 160
- *  I2C fault     FPGA temp FAULT
- *
- *
- *
-*/
-                }
-            }
-            
-    buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, 
-    AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG);
+            result = AUTO_CPU_TEMP_RETURN_VALUE+AUTO_I2C_RETURN_VALUE;
+            /*
+             *
+             * Il valore dipende dalla prioritï¿½ con cui bisogna risolvere il problema: questo identifica che sia il bus IC che l'accelerometro sono non funzionanti:
+             *
+             * 0b1000 0000 + 0b0010 0000 = 0b1010 0000 = 128+32 = 160
+             *  I2C fault     FPGA temp FAULT
+             *
+             *
+             *
+             */
+        }
+    }
+    //buffertmp = abacus_i2c_readRegister(AB_I2C_BUS00, AB_ADDRESS_TEMPFPGA, DS1775CONFIGREG);
+    //I2C replied with good timing, so is working, lets see if the ID is correct
     diagnosticFlags.I2CFlag=0x00;  // HO quindi abbassato la flag sia del sensore che del bus
     if(result==DS1775_FPGA_STD_CONFIG)
     {
         *flag=0x00;  //both sensor and i2c working, return is 0
-        return 0;
+        result = 0;
     }
     else
     {
         *flag=0xff;  //Stesso discorso dell'RTC
-/*
-*  Ricapitolando:
-*  Ho due flag:
-*  a) Flag_Diagnostic_Part.fpgaTemperatureSensorFlag
-*
-*  Possibiliti combinazioni:
-*
-*  1) fpgaTemperatureSensorFlag == 0 
-*  && fpgaTemperatureSensorSecondFlag == 0 tutto funziona bene
-*  2) fpgaTemperatureSensorFlag == 1 
-*  && fpgaTemperatureSensorSecondFlag == 0 riscontro 
-*  per la prima volta un problema
-*  3) fpgaTemperatureSensorFlag == 0 
-*  && fpgaTemperatureSensorSecondFlag == 1 NON SUCCEDE MAI
-*  4) fpgaTemperatureSensorFlag == 1 
-*  && fpgaTemperatureSensorSecondFlag == 1 devo disattivare 
-*/
-        abacus_sensors_temperature_init(); 
-        return AUTO_FPGA_TEMP_RETURN_VALUE;
+        /*L'RTC ï¿½ uno strumento fondamentale per il funzionamento del sistema. Bisogna creare un sistema che
+         * lo escluda soltanto nel caso di guasto continuativo (anche se lo resetto). Questo potrebbe essere fatto
+         *  sfruttando la flag che ho alzato non come una semplice flag che esclude direttamente al reset, ma con un sistema
+         * piï¿½ complesso come questo:
+         * 1) Avvio abacus e l'RTC ï¿½ certamente attivo e con la flag abbassata (a 0x0 )
+         * 2) Se riscontro un problema, alzo la flag, reimposto l'RTC e rebootto.
+         * 3) Al reboot riscontro la flag alta. Esiste perï¿½ una seconda flag che tiene conto se il problema ï¿½ perdurato e questa ï¿½ ancora bassa.
+         *  Attivo quindi l'RTC e eseguo tutta la fase di autodiagnosi.
+         *  4) Se non riscontro problemi, era un semplice problema di settaggi. Se riscontro nuovamente un problema (bus bloccato, config reg diverso)
+         *  significa che il problema ï¿½ perdurato. Attivo di conseguenza la seconda flag (Sensor_broken_flag) e rebootto.
+         *  5) In questo caso tutte e due le flag sono attive e so che non devo attivare l'RTC
+         *
+         *  Ricapitolando:
+         *  HO due flag:
+         *  a) Flag_Diagnostic_Part.RTCFlag
+         *  b) Flag_Diagnostic_Part.RTCbrokenflag
+         *
+         *  Possibilitï¿½:
+         *
+         *  1) RTCFlag == 0 && RTCbrokenflag == 0 tutto funziona bene
+         *  2) RTCFlag == 1 && RTCbrokenflag == 0 riscontro per la prima volta un problema
+         *  3) RTCFlag == 0 && RTCbrokenflag == 1 NON SUCCEDE MAI, PERCHï¿½ IMPONGO CHE LA BROKEN FLAG SIA MODIFICABILE DOPO LA RTC FLAG
+         *  2) RTCFlag == 1 && RTCbrokenflag == 1 problema perdurato, devo disattivare l'RTC
+         */
+        abacus_sensors_temperature_init(); //Vado a ricalibrare entrambi i sensori di temperatura. Potrei anche generare una funzione che calibri soltanto
+        //uno dei sensori di temperatura
+        result = AUTO_FPGA_TEMP_RETURN_VALUE;
     }
+    return result;
 }
 
 
@@ -3661,22 +3847,18 @@ uint8_t majorityDecisionChar(uint8_t value)
 {
     uint8_t counter=0;
     uint8_t k=0;
-    uint8_t result = 0;
-    
     for (k=0;k<8;k++)
     {
         counter+=((value & (1<<k))>>k);
     }
     if(counter>3)
     {
-        result = 1;
+        return 1;
     }
     else
     {
-        result = 0;
+        return 0;
     }
-    
-    return result;
 }
 
 
@@ -3685,14 +3867,29 @@ uint8_t majorityDecisionChar(uint8_t value)
 void checkFlashMemoryId(uint8_t* flag)
 {
 
+    /*
+     * Ogni richiesta di controllo del determinato sensore avviene tramite protocollo I2C. Questo protocollo si svolge in due parti: prima si richiede la determinata risorsa, poi il sensore ris
+     * ponde alla determinata richiesta. Ciï¿½ non avviene sempre e qualcosa puï¿½ andare storto (sensore rotto, bus I2C non funzionante). Per evitare che il codice si blocchi imponiamo quindi un
+     * tempo limite di risposta, pari ad un numero precisato di operazioni. Se il contatore raggiunge il limite, significa che il bus non risponde e di conseguenza bisogna supporre che entrambe
+     * le risorse (sensore e bus) non sono utilizzabili. In tal caso le flag a byte rimangono alte e dopo un software reset obbligato le risorse vengono escluse o il problema viene risolto.
+     * Come ultima spiaggia abbiamo inoltre attivato il watchdog timer che ci permette di non bloccare il codice nel caso in cui tutta la procedura venga bloccata da un evento inaspettato.
+     *
+     *
+     *
+     */
+
+
     WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
     *flag=0xFF;
 
+    uint8_t result=0;
+
+    //abacus_flashMCU_init();
 
     //Get the 3 byte identification
-    if( (memoryFlashMCU.flash_identification[0]==FLASH_IDEN_BYTE_0) && 
-    (memoryFlashMCU.flash_identification[1]==FLASH_IDEN_BYTE_1) &&
-    (memoryFlashMCU.flash_identification[2]==FLASH_IDEN_BYTE_2) )
+    if( (memoryFlashMCU.flash_identification[0]==FLASH_IDEN_BYTE_0) &&
+            (memoryFlashMCU.flash_identification[1]==FLASH_IDEN_BYTE_1) &&
+            (memoryFlashMCU.flash_identification[2]==FLASH_IDEN_BYTE_2) )
     {
         *flag=0x00;
     }
@@ -3937,6 +4134,180 @@ A prescindere dalla modalità di test, i requisiti che il sistema dovrà garanti
     \item Calcolo della media dei valori immagazzinati.
     
 \end{itemize}
+
+
+\subsection{Codice sorgente dell'algoritmo di controllo del raggiungimento dell'orbita}
+
+Acceleration.h:
+\begin{small}
+\begin{lstlisting}[language=C]
+#ifndef ACCELERATION_H_
+#define ACCELERATION_H_
+
+
+//il valore (modulo quadro) massimo da confrontare con il valore corrente di accelerazione (servirÃ  un valore molto piÃ¹ basso)
+#define THRESHOLD_ACCELERATION 5 // [ m^2*sec^-4 ]
+#define ACCELERATION_BUFFER_SIZE 32
+#include "abacus.h"
+//uint32_t PrevTime=RTC_abacus_millis();
+
+/*
+ *
+ * Function to set acceleration in the buffer AccelerationBuffer
+ *
+ */
+void addAcceleration(const int32_t* a);
+/*
+ *
+ * Function to set absolute value of acceleration 
+ *
+ */
+void setAbsAcceleration();
+/*
+ *
+ * Function to get absolute value of acceleration
+ *
+ */
+int32_t getAbsAcceleration();
+/*
+ *
+ * Function to get the mean value of acceleration (mean between ACCELEARTION_BUFFER_SIZE amount of samples)
+ *
+ */
+int32_t getMeanAcceleration();
+/*
+ *
+ * Function to check if satellite has acceleration while code is running. This should check only one time acceleration and stop all the operations if needed for N seconds
+ *
+ */
+uint8_t checkAccelerationAtStartTime();
+
+typedef struct CircularBuffer
+{
+float buffer[ACCELERATION_BUFFER_SIZE];
+float mean3DAcceleration;
+uint8_t index;
+uint8_t full;
+}CircularBuffer;
+
+CircularBuffer accelerationBuffer;
+
+
+uint8_t isSatelliteInSpace();
+
+#endif
+\end{lstlisting}
+\end{small}
+Acceleration.c:
+\begin{small}
+\begin{lstlisting}[language=C]
+#include "Acceleration.h"
+#include <math.h>
+#include "abacus.h"
+
+void addAcceleration(const int32_t* a)
+{
+    accelerationBuffer.buffer[accelerationBuffer.index % ACCELERATION_BUFFER_SIZE] = *a;
+
+    if(accelerationBuffer.index < ACCELERATION_BUFFER_SIZE){
+        ++accelerationBuffer.index;
+    }else{
+        accelerationBuffer.index=0;
+    }
+
+    if(!accelerationBuffer.full && ( accelerationBuffer.index == ACCELERATION_BUFFER_SIZE ) ){
+        accelerationBuffer.full = 0xff;
+    }
+    accelerationBuffer.mean3DAcceleration = getMeanAcceleration();
+
+}
+
+void setAbsAcceleration()
+{
+    int32_t absAccelerationValue=getAbsAcceleration();
+    addAcceleration(&absAccelerationValue);
+}
+
+
+int32_t getAbsAcceleration()
+{
+
+    int16_t x, y, z;
+    float xFloat, yFloat, zFloat;   
+    //This constant value is a multiplier needed to evaluate acceleration on earth
+    float earthAccelerationMultiplier = 0.04f;
+    int32_t result;
+
+    abacus_sensors_acc_read(&x, &y, &z);
+    //This conversion front int16_t to float is needed to evaluate with more precision the absolute value of acceleration
+    xFloat = (float)(x) * earthAccelerationMultiplier;
+    yFloat = (float)(y) * earthAccelerationMultiplier;
+    zFloat = (float)(z) * earthAccelerationMultiplier;
+    result = (int32_t) floor( sqrt(xFloat * xFloat + yFloat * yFloat + zFloat * zFloat ) ) ;
+    return result;
+}
+
+
+int32_t getMeanAcceleration()
+{
+    int32_t result=0;
+    short i;
+    if(accelerationBuffer.full == 0x0 ){
+
+        for (i=0;i<accelerationBuffer.index;++i){
+            result+=accelerationBuffer.buffer[i];
+        }
+
+        result = result/accelerationBuffer.index;
+    }
+    else{
+
+        for (i=0;i<ACCELERATION_BUFFER_SIZE;++i){
+            result+=accelerationBuffer.buffer[i];
+        }
+
+        result = result/ACCELERATION_BUFFER_SIZE;
+    }
+    return result;
+}
+
+
+uint8_t checkAccelerationAtStartTime()
+{
+
+    if(getMeanAcceleration()>THRESHOLD_ACCELERATION){
+
+        return 0xff;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+
+
+
+uint8_t isSatelliteInSpace()
+{
+    uint8_t result=0x0;
+    uint16_t i;
+    for( i=2*ACCELERATION_BUFFER_SIZE;i>0; --i){
+        setAbsAcceleration();
+        //blink_routine(100);
+
+    }
+    if(!checkAccelerationAtStartTime())
+    {
+        abacus_sleep_msec(100000UL); //number of msecseconds = 100 sec
+        result=0xff;
+    }
+    return result;
+}
+
+\end{lstlisting}
+\end{small}
 \subsection{Test comparativo per il calcolo del valore medio tramite il Circular Buffer}
 
 Data la semplicità del componente software, il test di funzionamento è stato eseguito tramite compilatore gcc ed direttamente da terminale Linux. La scelta è stata possibile poiché il suo test non necessita di nessuna libreria esterna.
@@ -4182,12 +4553,22 @@ Il file main.c:
 #include "abacus.h"
 #include "bootloader/bootloader.h"
 #include "satellite/satsystem_init.h"
-#include "PersistentRam/PersistentRam.h"
-#include "SatelliteAcceleration/Acceleration.h"
 #include "SelfDiag/selfDiag.h"
-#include "BackupRom/BackupRom.h"
-
+#include "SatelliteAcceleration/Acceleration.h"
 #pragma CODE_SECTION(main,".text_bootloader")
+
+/*
+ * TO DO
+ * 1) define status register
+ * 2) define FLASH memory usage and map (experiments, telemetry, hamradio...)
+ * 3) define opmodes and change criteria (baud rate, power...)
+ * 4) define experiments_set and experiment structures
+ * 5) organize memory scrubs and spare boot codes
+ * 6) define controlled reboots and actions in case of errors
+ * 7) define events (refer to STECCO code)
+ *
+ * */
+
 /*
  * Main routine
  * After initialization the satellite checks if there are tasks to do 
@@ -4200,109 +4581,98 @@ int main(void)
     // Stop watchdog timer
     WDTCTL = WDTPW | WDTHOLD;
 
-    //Check memory status
+//    //Check memory status
     int8_t bootResult = bootloaderStart();
-    
-    //Hardware initialization with diagnostics with WDT enabled here
+
+
+    uint8_t scrubMemory = scrubbingRoutine();
+//    //Hardware initialization
+//    //with diagnostics
+//    //WDT enabled here
     satsystem_init();
-
-    //disable the led
+//
     AB_LED_OFF;
-    
-    //Restore of SatelliteStatus previous situation if needed
-    if( isScrubbingPossible((int16_t*)MEMORY_TO_BACKUP_STARTING_POINTER,
-    (int16_t)PERSISTENT_RAM_BYTE_SIZE) )
-        {
-            restoreDataFromPersistentRam((uint16_t*)MEMORY_TO_BACKUP_STARTING_POINTER,
-            (uint8_t*)PERSISTENT_RAM_STARTING_POINTER, (uint32_t)PERSISTENT_RAM_BYTE_SIZE);
-        }
-        else
-        {
-
-            if( isRomBackupPossible((uint32_t)ROM_BACKUP_STARTING_POINTER,
-            (uint32_t)PERSISTENT_RAM_BYTE_SIZE) )
-            {
-                restoreDataFromRomBackup((uint32_t)MEMORY_TO_BACKUP_STARTING_POINTER, 
-                (uint32_t)ROM_BACKUP_STARTING_POINTER, (uint32_t)PERSISTENT_RAM_BYTE_SIZE);
-            }
-
-            backupDataInPersistentRam((uint16_t*)MEMORY_TO_BACKUP_STARTING_POINTER, 
-            (uint8_t*)PERSISTENT_RAM_STARTING_POINTER, (uint32_t)PERSISTENT_RAM_BYTE_SIZE);
-        }
-
-    //Check if the space orbit is reached, otherwise we stop the start-up for 100 seconds
-    uint8_t satelliteInSpace=isSatelliteInSpace();
-
-   //Check flight status and boot into preprogrammed sequence
+//
+//    //Check flight status and boot into preprogrammed sequence
     bootFlightStatus();
+//
+    int8_t systemDiagnostic = selfDiagInit();
+//    //Enter main loop
 
-    //Enter main loop
+    uint8_t isSatelliteInOrbit = isSatelliteInSpace();
+
     while (1)
     {
-        //Kick the WDT again
+//        //Kick the WDT again
         WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Data from MARIE? Store them in FLASH
-        checkMarie();
+        //*** really need to do it here?
+        //*** it could be done without wakeup probably
+        //checkMarie();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check commands on debug UART or on Radio UART
-        checkRadio();
+        //checkRadio();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check commands on debug UART or on Radio UART
-        checkDebugCommand();
+        //checkDebugCommand();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check satellite status and update if necessary
-        checkStatus();
+        //checkStatus();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to do a new step of an experiment?
-        checkExperiment();
-
+        //checkExperiment();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+       // WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+
+        //Digipeater action?
+        //checkRadioHam();
+
+        //Kick the WDT again
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to read telemetry?
-        checkTelemetry();
+        //checkTelemetry();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to send beacon?
-        checkBeacon();
+        //checkBeacon();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
-        checkMemoryOp();
+        //checkMemoryOp();
 
         //Kick the WDT again
-        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
-        
-        //No action  for 60 seconds, system go to sleep and wait until the new action is needed
-        check_minute_counter();
+        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
-        AB_LED_OFF;
+        //check_minute_counter();
 
-        timer_goToSleep();
-
+        //AB_LED_OFF;
+//
+        //timer_goToSleep();
+//
         if (satelliteConfiguration_.debugIsOn == 1)
             AB_LED_ON;
     }
-
-    //It will never arrive here fortunately
-    return 0;
+//
+//    //It will never arrive here fortunately
+//    //return 0;
 }
 \end{lstlisting}
 \end{small}
