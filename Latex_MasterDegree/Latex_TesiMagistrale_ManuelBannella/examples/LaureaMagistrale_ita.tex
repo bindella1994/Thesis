@@ -2276,7 +2276,7 @@ In questa sezione andremo ad esaminare tutti i test cases in cui il firmware pre
 Ogni test del funzionamento dell'algoritmo partirà da una fase di inizializzazione del software ed in particolare verrà assicurata l'inizializzazione del registro di stato del satellite. I valori contenuti all'interno della struttura di scrubbing partiranno da una situazione di non corruzione e inoltre verrà assicurato che il backup del registro di stato del satellite è già avvenuto almeno una volta.
 
 La modalità di studio del comportamento del codice in cui ci siamo posti è quella di debug, ovvero la modalità che ha ci ha permesso di esaminare in tempo reale il contenuto delle singole locazioni di memoria .
-Questa modalità ci ha permesso anche di inserire delle corruzioni in singole locazioni (sia di memoria RAM che di Flash), così da simulare delle corruzioni puntuali del memoria dell'MCU.
+Questa modalità ci ha inoltre reso possibile l'inserimento di corruzioni in singole locazioni di memoria (sia di memoria RAM che di Flash), così da simulare delle corruzioni puntuali del memoria dell'MCU.
 
 Tutte le verifiche e le corruzioni in fase di integrazione finale del software sono state eseguite tramite il "Memory Browser" contenuto in Code Composite Studio.
 
@@ -2295,9 +2295,9 @@ La verifica della correttezza dell'algoritmo è stata possibile eseguendo un con
 
 \newpage
 
-Analizzando la figura 4.6 è possibile apprezzare un andamento crescente della percentuale del numero di errori. Per valori bassi di numero di corruzioni il sistema riesce dunque a mantenere statisticamente il registro di stato sempre integro. All'aumentare del numero di corruzioni le prestazioni dunque tendono a diminuire. Questo è dovuto al fatto che con sempre meno frequenza è possibile utilizzare il backup in persistent RAM per ripristinare la memoria principale. L'algoritmo infatti permette il ripristino soltanto se tutti i blocchi di memoria protetta sono integri nel momento in cui si esegue il restore della memoria. In caso contrario, durante la fase di start-up il sistema sarebbe costretto a ripartire da capo con dei valori di inizializzazione, generando quindi un aumento notevole del numero di volte della reinizializzazione del registro del satellite. 
+Analizzando la figura 4.6 è possibile apprezzare un andamento crescente della percentuale del numero di errori. Per valori bassi di numero di corruzioni il sistema riesce dunque a mantenere statisticamente il registro di stato quasi sempre integro. All'aumentare del numero di corruzioni le prestazioni dunque tende a diminuire. Questo è dovuto al fatto che con sempre meno frequenza è possibile utilizzare il backup in persistent RAM per ripristinare la memoria principale. L'algoritmo infatti permette il ripristino soltanto se tutti i blocchi di memoria protetta sono integri nel momento in cui si esegue il restore della memoria. In caso contrario, durante la fase di start-up il sistema sarebbe costretto a ripartire da capo con dei valori di inizializzazione, generando quindi un aumento notevole del numero di volte della reinizializzazione del registro del satellite. 
 
-A parità di frequenza di corruzione della memoria, è necessario dunque eseguire una scelta appropriata della frequenza con cui l'algoritmo di scrubbing sia attivato. Questa scelta garantirebbe un numero inferiore di ripristini del registro e in secondo luogo manterrebbe sempre una copia più aggiornata di tutto registro.
+A parità di frequenza di corruzione della memoria, è necessario eseguire una scelta appropriata della frequenza con cui l'algoritmo di scrubbing sia attivato. Questa scelta garantirebbe un numero inferiore di ripristini del registro e in secondo luogo manterrebbe sempre una copia più aggiornata di tutto registro.
 
 Eseguendo un fit tramite Maltab del risultato ottenuto al variare del numero di corruzioni all'interno di tutta la memoria è possibile dunque stimare la probabilità di corruzione.
 
@@ -2899,13 +2899,13 @@ void copyPersistentRamForFinalTest(uint8_t* startingPointer,uint8_t* copyStartin
 \subsection{Iniezione di corruzioni nella sezione di "Persistent" nel sistema Abacus}
 
 Il test di integrazione dell'algoritmo di scrubbing su un sistema microcontrollore è consistito nella corruzione di una locazione casuale di una parte di memoria persistent RAM, copia di una sezione di memoria RAM utilizzata dal microcontrollore. 
-Questa parte di memoria definita come backup di dati utilizzati dal sistema è generica. In una situazione pratica questa parte di memoria ptrebbe coincidere con il registro di stato del satellite.
+Questa parte di memoria definita come backup di dati utilizzati dal sistema è generica. In una situazione pratica questa parte di memoria coinciderebbe con lo spazio di memoria occupato dal registro di stato del satellite.
 
-L'obiettivo finale di questo test è stato la correzione sia della parte persistent che del buffer di memoria utilizzato.
+L'obiettivo finale di questo test è stato verificare la correzione sia della parte persistent che del buffer di memoria utilizzato, preventivamente corrotti manualmente.
 
-La prima azione che l'algoritmo di scrubbing si è occupato di fare si tratta dell'azione periodica di backup dell'informazione contenuta nella memoria utilizzata dal sistema all'interno della parte persistent (la memoria di backup protetta appunto dallo scrubbing). Questo meccanismo è necessario poiché il contenuto informativo di sezioni dati di zona di memoria come il registro di stato è soggetto a variazioni periodiche e non continue (come ad esempio il numero di rebbot che il microcontrollore esegue). 
+La prima azione che l'algoritmo di scrubbing si è occupato di fare è il backup dell'informazione contenuta nella memoria utilizzata dal sistema all'interno della parte persistent (la memoria di backup protetta appunto dallo scrubbing). Questo meccanismo è necessario poiché il contenuto informativo di sezioni dati di zona di memoria come il registro di stato è soggetto a variazioni periodiche e non continue (come ad esempio il numero di rebbot che il microcontrollore esegue). 
 
-Nel caso in cui il microcontrollore sia costretto a eseguire un reset del sistema l'informazione nella registro di stato viene persa poichè la memoria RAM generica è una memoria volatile. Dunque avere un backup periodico del registro di stato è molto utile per poter ripartire da una situazione non di partenza.
+Nel caso in cui il microcontrollore sia costretto a eseguire un reset del sistema l'informazione nella registro di stato sarebbe persa. Questo poichè la memoria RAM generica è una memoria volatile. Dunque avere un backup periodico del registro di stato è molto utile per poter ripartire da una situazione non di partenza.
 
 La figura 4.6 descrive la struttura dati utilizzata per simulare una generica parte di memoria chiamata per l'appunto Memory. Questa consiste in un buffer di valori unsigned char e a partire da questa l'algoritmo eseguirà un backup nella parte persistent di memoria.
 \begin{figure}[htbp]
@@ -2923,7 +2923,7 @@ L'azione che viene eseguita periodicamente è quella di salvare i valori contenu
 \end{figure}
 \vspace{0.5cm}
 
-Utilizzando il Memory Browser, vedi figura 4.8, abbiamo corrotto una locazione di memoria della RAM originale. Questa operazione è facilmente eseguibile in fase di Debug premendo direttamente su una locazione a scelta (nel nostro caso quella evidenziata in blu). Una volta scritto un valore e premuto invio, la modifica risulta consistente anche all'interno della memoria vera e dunque è possibile eseguire la corruzione della memoria originale.
+Utilizzando il Memory Browser, vedi figura 4.8, abbiamo corrotto una locazione di memoria della RAM originale. Questa operazione è facilmente eseguibile in fase di Debug premendo direttamente su una locazione a scelta (nel nostro caso quella evidenziata in blu). Una volta scritto un valore e premuto invio, la modifica risulta consistente anche all'interno della memoria fisica e dunque è possibile eseguire la corruzione della memoria originale.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.8]{examples/3_MemoryBrowserCorruzione.JPG}}
@@ -2940,7 +2940,7 @@ Questa è proprio la zona di memoria di backup che tramite l'algoritmo di scrubb
 \label{fig}
 \end{figure}
 \newline
-In fase di esecuzione scatta dunque periodicamente l'algoritmo di scrubbing, il quale si occupa di rivelare e possibilmente correggere le sezioni di memoria corrotte. Nel nostro caso il primo gruppo di byte è proprio il settore da correggere, mentre gli altri sono riconosciuti come sezioni corrette. Come è possibile notare dalla figura 4.10 il valore 0x1000 viene correttamente riscritto al suo valore originale (nel nostro caso era proprio 0x0000)
+In fase di esecuzione scatta dunque periodicamente l'algoritmo di scrubbing, il quale si occupa di rivelare e possibilmente correggere le sezioni di memoria corrotte. Nel nostro caso il primo gruppo di byte è proprio il settore da correggere, mentre gli altri sono riconosciuti come sezioni corrette. Come è possibile notare dalla figura 4.10, il valore 0x1000 viene correttamente riscritto al suo valore originale (nel nostro caso era proprio 0x0000)
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.8]{examples/6_ScrubbingPersistentRamRiuscita.JPG}}
@@ -2954,10 +2954,10 @@ Le due condizioni necessarie per il ripristino sono:
 \begin{itemize}
     \item Che la flag chiamata "isPersistentRamWritten" sia già stata alzata, dunque che il contenuto della persistentRAM contenga almeno un backup.
     
-    \item Che la parità 4D salvata in memoria sia coincidente con quella calcolata durante il controllo. Questo significa che il contenuto di backup sia integro.
+    \item Che la parità 4D salvata in memoria sia coincidente con quella calcolata durante il controllo. Questo significa che il contenuto di backup sia completamente integro.
     
 \end{itemize}
-Nella figura 4.11 andiamo dunque ad analizzare il contenuto della memoria principale (sita nel nostro caso nella locazione 0x2960). I valori corrotti sono stati dunque ripristinati e dunque l'integrità della memoria è conservata.
+Nella figura 4.11 andiamo dunque ad analizzare il contenuto della memoria principale (sita nel nostro caso nella locazione 0x2960). I valori corrotti sono stati dunque ripristinati e l'integrità della memoria è stata conservata.
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.6]{examples/7_CorrezioneMemory.JPG}}
 \caption{Correzione della memoria principale tramite i valori presenti in persistentRam.}
@@ -2968,10 +2968,7 @@ Nella figura 4.11 andiamo dunque ad analizzare il contenuto della memoria princi
 \chapter{Autodiagnosi delle componenti del microcontrollore/FPGA MSP430}
 
 Il sistema di Abacus permette anche in fase di esecuzione di disattivare o attivare la comunicazione con alcune parti dell’hardware senza inficiare direttamente sul corretto funzionamento del satellite. 
-Questa caratteristica è molto utile in un ambiente in cui alcuni componenti possono essere ad esempio danneggiati da agenti come radiazione o da detriti e oltretutto non possono essere direttamente riparati. 
-
-Un’altra caratteristica importante è il consumo di potenza del satellite: poiché l’unica fonte di potenza sono proprio i pannelli solari presenti sul satellite stesso, è nostro obiettivo rendere la struttura flessibile in base alla potenza disponibile. 
-Questo perché i pannelli solari generano potenza elettrica soltanto nel periodo in cui non sono in eclisse. Sebbene in teoria il periodo di eclisse non dovrebbe generare dei problemi di potenza (poiché ha un durata limitata e periodica ), è molto utile modulare il consumo di potenza in base alla carica rimanente, in modo tale da garantire con maggiore sicurezza un funzionamento più continuativo del satellite durante tutta la missione.
+Questa caratteristica è molto utile in un ambiente in cui alcuni componenti possono essere ad esempio danneggiate da agenti esterni come radiazione o da detriti e oltretutto non possono essere direttamente riparati durante il volo. 
 
 L’obiettivo dunque dell’algoritmo nel caso del controllo dei sensori è quello di testare individualmente ogni singola componente hardware facendolo interrogare dalla CPU tramite il corretto protocollo di comunicazione.
 
@@ -3002,8 +2999,8 @@ Analizziamo dunque come è formato il pacchetto SPI ricevuto:
 
 
 
-Ogni versione di Abacus ha a disposizione diversi componenti hardware anche se il numero dei sensori è rimasto inalterato nel tempo.
-Di seguito è possibile consultare i valori dei registri necessari per il controllo specificate per tutte e tre le diverse versioni di abacus:
+Ogni versione di Abacus ha a disposizione diversi componenti hardware ma il numero dei sensori è rimasto inalterato nel tempo.
+Di seguito è possibile consultare i valori dei registri necessari per il controllo. Tale costanti sono specificate per tutte e tre le diverse versioni di abacus disponibili ad oggi:
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.55]{examples/registerMapSensori.PNG}}
@@ -3013,23 +3010,24 @@ Di seguito è possibile consultare i valori dei registri necessari per il contro
 \vspace{0.5cm}
 
 La struttura dell'algoritmo è dunque utilizzabile per tutte le diverse versioni di Abacus.
-Poichè la versione di Abacus utilizzata è la versione 2017, sebbene nell'algoritmo vengono fornite le costanti da utilizzare per tutte le versioni, l'implementazione utilizza soltanto le definizioni inerenti l'ultima versione.
+Il codice utilizza ovviamente una delle tre configurazioni in armonia con l'impostazione del sistema (nei nostri test è stata utilizzata la versione 2017). Per utilizzare una versione differente basta cambiare le costanti che l'algoritmo e tali valori sono già presenti nel file header.
 
 
 \section{Struttura del codice di autodiagnosi}
 
-L’obiettivo dunque dell’algoritmo nel caso del controllo dei sensori è quello di testare individualmente ogni singola componente hardware facendolo interrogare dalla CPU tramite il corretto protocollo di comunicazione.
-Nel caso dei sensori la corretta comunicazione avviene tramite protocollo I2C e di conseguenza il corretto funzionamento è garantito tramite l’azione di richiedere al determinato sensore il proprio numero identificativo (chiamato “Device ID”), ovvero un valore costante definito all’interno di uno dei registri del satellite. Una volta richiesto in un tempo limitato dovremmo ricevere una risposta. Questo sarà a testimonianza del fatto che la comunicazione tra microcontrollore ed il sensore è instaurata.
+L’obiettivo dunque dell’algoritmo di diagnosi dei sensori è quello di testare individualmente ogni singola componente hardware, interrogandola tramite il corretto protocollo di comunicazione.
+Nel caso dei sensori la corretta comunicazione avviene tramite protocollo I2C e di conseguenza il corretto funzionamento è garantito tramite l’azione di richiedere il numero identificativo specifico (chiamato “Device ID”), ovvero un valore costante definito all’interno di uno dei registri del satellite. Una volta richiesto tale valore, il sensore se funzionante dovrebbe rispondere in un tempo limitato. Per garantire ciò la cpu imposta un timer software e dunque un timeout per la risposta. Questo garantisce che la comunicazione tra microcontrollore ed il sensore è definita correttamente.
 
-Una volta ricevuto il messaggio di risposta contenente il device ID, basterà confrontarlo con il valore definito a priori all’interno del microcontrollore. Se i due valori coincideranno evidentemente il valore contenuto all’interno del registro del sensore è corretto (dunque non corrotto) e conseguentemente la comunicazione hardware-microcontrollore è svolta in maniera coerente. 
-In secondo luogo è possibile verificare le corrette impostazioni dei sensori, analizzando e correggendo se necessario i registri di configurazione (uno o più in base al tipo di sensore). Il meccanismo di timeout della comunicazione è quindi più utilizzato poiché arrivati a questo punto, siamo certi di comunicare con il sensore.
+Una volta ricevuto il messaggio di risposta contenente il device ID, basterà confrontarlo con il valore definito a priori all’interno del microcontrollore. Se i due valori sono coincidenti, il valore contenuto all’interno del registro del sensore è corretto (dunque non corrotto) e conseguentemente la comunicazione hardware-microcontrollore è svolta in maniera coerente. In secondo luogo, è possibile verificare le corrette impostazioni dei sensori, analizzando e correggendo se necessario i registri di configurazione (uno o più in base al tipo di sensore). 
+
+Il meccanismo di timeout della comunicazione è quindi non più utilizzato poiché arrivati a questo punto, siamo certi di comunicare con il sensore.
 Ogni malfunzionamento (del singolo sensore o dell'intero bus I2C) è gestito in maniera diversa in base alla tipologia ed importanza di ogni singolo sensore.
 
 La funzione di controllo dello stato del sensore infatti fornisce come valore di ritorno un valore pari a 0 nel caso in cui tutto funzioni correttamente, mentre un valore maggiore di 0 nel caso in cui abbia evidenzia una incorrettezza.
 
 Questo valore di ritorno sarà dunque sommato per tutti i sensori di Abacus e la somma fornirà l'entità del problema. E' stata dunque stabilità una soglia minima (pari al valore esadecimale 0x10) per cui il sistema eseguirà subito un software reset.
 
-Come altra contromisura, vengono definite delle flag salvati nella zona di memoria definite come "Persistent" (definite a partire dallo stesso meccanismo utilizzato nel caso dell'algoritmo di scrubbing) e dunque consultabile anche dopo un software reset, in modo da escludere direttamente al nuovo riavvio l'utilizzo del sensore danneggiato evitando così un errato utilizzo delle periferiche malfunzionanti. 
+Come altra contromisura sono state definite delle flag salvati nella zona di memoria definite come "Persistent" (definite a partire dallo stesso meccanismo utilizzato nel caso dell'algoritmo di scrubbing) e dunque consultabile anche dopo un software reset, in modo da escludere direttamente al nuovo riavvio l'utilizzo del sensore danneggiato evitando così un errato utilizzo delle periferiche malfunzionanti. 
 
 Questo  meccanismo è molto utile per mantenere memoria dello stato del satellite ed evitare dunque un ricontrollo di un componente sicuramente non funzionante.
 \newline\newline
@@ -3913,17 +3911,17 @@ int8_t selfDiagInit()
 \newpage
 
 \section{Test dell'algoritmo di autodiagnosi}
-In questa sezione andremo ad esaminare tutti i test cases in cui il firmware presente sul microcontrollore utilizzerà l'algoritmo di autodiagnosi, ovvero il codice eseguito in fase start-up e che permette di identificare la "salute" della comunicazione tra il microcontrollore stesso e tutti i sottosistemi a cui è connesso, tra cui i diversi sensori, i bus dedicati alle comunicazioni dei sensori e entrambe le memoria non volatili (sia quella dedicata all'MCU che quella dedicata per l'FPGA).
+In questa sezione andremo ad esaminare tutti i test cases in cui il firmware presente sul microcontrollore utilizza l'algoritmo di autodiagnosi, ovvero il codice eseguito in fase start-up e che permette di identificare la "salute" della comunicazione tra il microcontrollore stesso e tutti i sottosistemi a cui è connesso, tra cui i diversi sensori, i bus dedicati alle comunicazioni dei sensori e entrambe le memoria non volatili (sia quella dedicata all'MCU che quella dedicata per l'FPGA).
 
-Attraverso una parte dedicata di memoria presente nella parte persistent della RAM del sistema, è possibile in fase di inizializzazione identificare quali dei sottosistemi non comunica direttamente con il core. In quel caso, ipotizzato che il sottosistema non sia più funzionante, questo non viene più utilizzato. In questo modi si evitano dunque inutili controlli e eventuali problemi di consistenza dei dati forniti dal sottosistema rotto, problema che potrebbe causare il blocco dell'intero sistema.
+Attraverso una parte dedicata di memoria presente nella parte persistent della RAM del sistema, è possibile in fase di inizializzazione identificare quali dei sottosistemi non comunica direttamente con il core. In quel caso, ipotizzato che il sottosistema non sia più funzionante, questo non viene più utilizzato e dunque neanche ricontrollato.
 
-Ogni test del funzionamento dell'algoritmo partirà da una situazione iniziale di codice in fase di start-up, ovvero nella la fase di inizializzazione del microcontrollore, ovvero il periodo di tempo in cui il codice richiama l'autodiagnosi del sistema. Questa situazione può avvenire direttamente al primo boot del sistema , di reboot periodico (ad esempio ogni giorno), ovvero in una fase di partenza del microcontrollore e quindi di assenza di conoscenza dello stato del sistema oppure una situazione di reboot causato dal watchdog timer, ovvero una situazione in cui una autodiagnosi è già avvenuta e quindi è possibile escludere a priori eventuali sottosistemi rotti.
+Ogni test del funzionamento dell'algoritmo è partito da una situazione iniziale di codice in fase di start-up, ovvero nella la fase di inizializzazione del microcontrollore. In tale fase il codice richiama per l'appunto l'autodiagnosi del sistema. Questa situazione può avvenire direttamente al primo boot del sistema oppure durante un reboot periodico (ad esempio ogni giorno). Le due situazioni sono differenti: nel primo caso ci troviamo in una fase di partenza del microcontrollore e quindi di assenza di conoscenza dello stato del sistema, mentre nel secondo caso in una situazione di reboot causato dal watchdog timer, ovvero una situazione in cui una autodiagnosi è già avvenuta e quindi è possibile escludere a priori eventuali sottosistemi rotti.
 
-La modalità di studio del comportamento del codice in cui ci porremo sarà quella di debug, ovvero la modalità che permetterà di esaminare in tempo reale il contenuto delle singole locazioni di memoria ed in particolare i registri in persistent RAM dedicati a mantenere informazioni riguardo lo stato di ogni singolo sottosistema.
+La modalità di studio del comportamento del codice in cui ci porremo sarà quella di debug, ovvero la modalità che ci ha permesso di esaminare in tempo reale il contenuto delle singole locazioni di memoria ed in particolare i registri in persistent RAM dedicati a mantenere informazioni riguardo lo stato di ogni singolo sottosistema.
 
 Per valutare il contenuto delle singoli locazioni di memoria, Code Composiste Studio lo strumento di Memory Browser in cui è possibile analizzare in formato esadecimale tutta la memoria del microcontrollore, compresa la parte di persistentRAM.
 
-L'obiettivo finale di ogni test sarà quello di valutare la correttezza del codice eseguito, ponendoci da oracolo e valutando tramite l'osservazione diretta l'efficacia del controllo di integrità sui singoli sottosistemi eseguito dall'algoritmo di di autodiagnosi.\newline\newline
+L'obiettivo finale di ogni test è stato quello di valutare la correttezza del codice eseguito, ponendoci da oracolo e valutando tramite l'osservazione diretta l'efficacia del controllo di integrità sui singoli sottosistemi eseguito dall'algoritmo di di autodiagnosi.\newline\newline
 I requisiti che il sistema dovrà garantire durante l'esecuzione del codice saranno:
 \begin{itemize}
 
@@ -3941,14 +3939,14 @@ Il test di integrazione dell'algoritmo di autodiagnosi parte da uno stato di sta
 
 Per controllare l'effettiva attivazione di tutti i sensori analizziamo con il debugger abbiamo inserito la variabile globale all'interno del menu delle expression premendo "addGlobalVariable" e selezionando la nostra struct "diagnosticFlag". 
 
-la struttura dati definita col nome di "diagnosticFlag", ovvero una raccolta di tutte le flag presenti nella sezione persistent di memoria RAM. Tutte le variabili sono dunque settate al valore esadecimale 0x0 (vedi figura 5.4) e quindi attivate. Qualsiasi valore differente dallo 0 significherebbe che la flag sia alzata ed in tale caso l'algoritmo di autodiagnosi non controllerebbe il suddetto sensore.
+la struttura dati definita col nome di "diagnosticFlag", ovvero una raccolta di tutte le flag presenti nella sezione persistent di memoria RAM. Tutte le variabili sono dunque settate al valore esadecimale 0x0 (vedi figura 5.4) e quindi attivate. Qualsiasi valore differente dallo 0 avrebbe significato che la flag fosse alzata. In tale caso, l'algoritmo di autodiagnosi non avrebbe controllato il suddetto sensore.
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.6]{examples/1_diagnosticFlagStart.JPG}}
 \caption{Le flag riferite ad ogni singolo sensore è abbassata in fase di start-up del sistema}
 \label{fig}
 \end{figure}
 \vspace{0.5cm}
-Passiamo dunque al controllo del primo sensore, ovvero l'accelerometro. La funzione di controllo del sensore come prima azione alza sia la flag relativa al sensore che al bus I2C, vedi figura 5.5. Questa è scelta è dovuta al fatto che il computer di bordo richiede una richiesta di comunicazione tramite un bus I2C ad un sensore che potrebbe essere rotto. A tale richiesta non corrisponderebbe mai una richiesta, creando quindi una situazione di deadlock del codice. 
+Passiamo dunque al controllo del primo sensore, ovvero l'accelerometro. La funzione di controllo del sensore come prima azione alza sia la flag relativa al sensore che al bus I2C, vedi figura 5.5. Questa scelta è dovuta al fatto che il computer di bordo richiede una richiesta di comunicazione tramite un bus I2C ad un sensore che potrebbe essere rotto. A tale richiesta non corrisponderebbe mai una richiesta, creando quindi una situazione di deadlock del codice. 
 In tal caso il Watchdog Timer resetterebbe il sistema e riscontrando le flag dedicate già alzate, il blocco sarebbe risolto.\newline
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.65]{examples/2_startAccelorometerCheck.JPG}}
@@ -3965,7 +3963,7 @@ Una volta ricevuta la risposta tramite bus I2C da parte dell'accelerometro, il s
 \label{fig}
 \end{figure}
 
-Il prossimo controllo che la funzione di diagnosi del sensore di accelerazione esegue è il confronto tra l'ID ricevuto tramite richiesta I2C al sensore con il valore salvato a priori in memoria. Se i due valori coincideranno la flag relativa all'accelerometro verrà abbassata, viceversa verrà lasciata alta.\newline
+Il prossimo controllo che la funzione di diagnosi del sensore di accelerazione esegue è il confronto tra l'ID ricevuto tramite richiesta I2C al sensore con il valore salvato a priori in memoria. Se i due valori sono coincidenti, la flag relativa all'accelerometro viene abbassata, viceversa viene lasciata alta.\newline
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.65]{examples/4_badAccelerometerId.JPG}}
@@ -3973,7 +3971,7 @@ Il prossimo controllo che la funzione di diagnosi del sensore di accelerazione e
 \label{fig}
 \end{figure}
 
-Nel nostro caso i due valori di numero identificativo relativo all'accelerometro non sono coincisi: il valore decimale associato a priori era infatti pari a "0xE5", ovvero 229 in decimale, mentre il bus ha ritornato un valore pari a 252. L'algoritmo dunque riscontra quindi il malfunzionamento dell'accelerometro e quindi ritorna alla funzione generica di diagnosi dell'interno sistema un valore diverso a 0 (nel nostro caso un valore pari di result pari a 1, come è evidente nella figura 5.8).\newline
+Nel nostro caso i due valori di numero identificativo relativo all'accelerometro non sono gli stessi: il valore decimale associato a priori era infatti pari a "0xE5", ovvero 229 in decimale, mentre il bus ha un valore pari a 252. L'algoritmo dunque riscontra il malfunzionamento dell'accelerometro e ritorna alla funzione generica di diagnosi dell'interno sistema con un valori di output diverso a 0 (nel nostro caso un valore pari di result pari a 1, come è evidente nella figura 5.8).\newline
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.6]{examples/5_accelerometerCounter.JPG}}
@@ -3981,7 +3979,7 @@ Nel nostro caso i due valori di numero identificativo relativo all'accelerometro
 \label{fig}
 \end{figure}
 
-Una volta usciti dalla funzione di controllo dell'accelerometro, l'algoritmo continua con il controllo dei successivi sensori. Come è evidente in figura 5.9 la struttura diagnosticFlag ha mantenuto la flag relativa all'accelerometro alzata.
+Una volta usciti dalla funzione di controllo dell'accelerometro, l'algoritmo continua con il controllo dei successivi sensori. Come è evidente dalla figura 5.9 la struttura diagnosticFlag ha mantenuto la flag relativa all'accelerometro alzata.
 \newline
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.6]{examples/6_accelerometerIdBad.JPG}}
@@ -4003,7 +4001,7 @@ Una volta ultimati tutti i controlli relativi ai sensori, l'algoritmo di autodia
 \label{fig}
 \end{figure}
 
-In questo caso il valore di soglia viene quindi dunque confrontato con la soglia di "0x8". In caso di superamento il sistema sarebbe riavviato. Nel nostro caso (vedi figura 5.12), il controllo ha esito negativo e dunque il sistema continua la sua inizializzazione e terminando l'algoritmo di autodiagnosi.\newline
+Il valore di soglia viene confrontato con la soglia di "0x8". Se il valore di counter è superiore a tale soglia, il sistema viene riavviato. Nel nostro caso (vedi figura 5.12), il controllo ha esito negativo e dunque il sistema continua la sua inizializzazione e terminando l'algoritmo di autodiagnosi.\newline
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.7]{examples/9_ControlloDelNumeroDiFaultNO_RIAVVIO.JPG}}
@@ -4019,7 +4017,7 @@ In questo caso il valore di soglia viene quindi dunque confrontato con la soglia
 
 
 \chapter{Algoritmo di controllo del raggiungimento dell' orbita}
-Il compito principale di questo algoritmo consiste dunque nella valutazione del modulo dell’accelerazione del satellite. Questa parte di codice è relativa alla fase di inizializzazione del sistema e viene e viene disattivata tramite un' apposita flag una volta utilizzata per la prima volta, in modo da generare una "deadlock" del sistema, ovvero un ciclo infinito di reset e utilizzo di questa funzione e dunque la compromissione dell'inizio  della missione.
+Il compito principale di questo algoritmo consiste dunque nella valutazione del modulo dell’accelerazione del satellite. Questa parte di codice è relativa alla fase di inizializzazione del sistema e viene disattivata tramite un' apposita flag una volta utilizzata per la prima volta, in modo da garantire la non generazione di una "deadlock" del sistema, ovvero un ciclo continuo di reset e utilizzo di questa funzione il quale potrebbe compromettere l'inizio della missione.
 
 \section{Descrizione del sensore di accelerazione ADXL-345}
 \begin{figure}[htbp]
@@ -4070,7 +4068,7 @@ L'implementazione è molto semplice e comprende:
 
 \newline
 
-Analizziamo dunque il codice C riguardante il "Circular Buffer" utilizzato per calcolare l'accelerazione media:
+Analizziamo dunque il codice C riguardante la struttura "Circular Buffer" utilizzata in questo caso per calcolare l'accelerazione media:
 
 \begin{lstlisting}[language=C]
 typedef struct CircularBuffer
@@ -4086,15 +4084,16 @@ CircularBuffer accelerationBuffer;
 \section{Struttura del codice di controllo dell'accelerazione}
 Come abbiamo prima spiegato, l'accelerometro è dunque un sensore triassiale. Questo significa che  le misurazioni sono rispettivamente dell'accelerazione secondo l'asse x,y e z.
 
-Poichè è nostro obiettivo avere una misura del modulo dell’accelerazione, è necessario prima elaborare i dati forniti e poi eseguire una media dei valori calcolati. 
+Il nostro obiettivo è campionareil valore medio del modulo dell’accelerazione. Per avere tale valore, è necessario prima elaborare i dati forniti e poi eseguire una media dei valori calcolati. 
 
-L’algoritmo dunque valuta dunque l’accelerazione del satellite e la confronta con un valore di soglia massima (essendo la misura di modulo un valore necessariamente non negativo).
-In questo modo sarà possibile valutare l’effettivo raggiungimento dell’orbita e dunque l’affievolimento dell’accelerazione terrestre a cui il satellite è soggetto.
+L’algoritmo infine valuta l’accelerazione del satellite e la confronta con un valore di soglia massima (essendo la misura di modulo un valore necessariamente non negativo).
+In questo modo è possibile valutare l’effettivo raggiungimento dell’orbita determinata dalla diminuzione dell’accelerazione terrestre a cui il satellite è soggetto. Questo valore di accelerazione critico è stato dunque definito come la metà dell'accelerazione di gravità.
 
-Nel caso in cui all’accensione del satellite si verificasse la misurazione di una accelerazione sopra la soglia decisa, si obbliga il microcontrollore a non fare operazioni ed aspettare per un tempo limitato, sia per limitare i consumi (dato che il satellite non potrebbe ricaricare le proprie batterie quando ancora non è in orbita), sia per evitare la repentina accensione di tutte le operazioni che il satellite deve eseguire necessariamente dopo l’avvenuto raggiungimento dell’ orbita in cui la missione dovrà svolgersi. 
-Questo controllo viene però eseguito soltanto all’accensione e soltanto una volta(non periodicamente dunque) con l’obiettivo di garantire la sicura partenza della missione dopo lo stop anche in presenza di un’accelerazione e quindi di non mantenere inattivo il sistema nel caso di qualche non corretto funzionamento dell’algoritmo o dei sensori.
+Nel caso in cui all’accensione del satellite si verificasse la misurazione di una accelerazione sopra la soglia decisa, l'algoritmo obbligherebbe il microcontrollore a non fare operazioni ed aspettare per un tempo limitato. Questo blocco è mirato sia a limitare i consumi (dato che il satellite non potrebbe ricaricare le proprie batterie quando ancora non è in orbita), sia a evitare la repentina accensione di tutte le operazioni programmate ad avvenire dopo il raggiungimento dell’ orbita in cui la missione dovrebbe svolgersi. 
 
-Poiché il campionamento dell’accelerazione da parte del sensore è soggetto a degli errori di misurazione e ad una incertezza definita nel datasheet dello stesso dispositivo, l’algoritmo di valutazione dell’accelerazione fa uso di una valutazione dell’accelerazione media per un numero di campionamenti definiti a priori (nel nostro caso 64 campioni).
+Questo controllo è unico, ovvero viene eseguito soltanto all’accensione e soltanto una volta (non periodicamente dunque). In questo modo viene garantita la sicura partenza della missione e permette di assicurarci una possibile inattività perenne del sistema.
+
+Poiché il campionamento dell’accelerazione da parte del sensore è soggetto a degli errori di misurazione e ad una incertezza definita nel datasheet dello stesso dispositivo, l’algoritmo fa uso di una valutazione dell’accelerazione media per un numero di campionamenti definiti a priori (nel nostro caso 64 campioni, ovvero la grandezza del buffer).
 In questo modo è possibile mitigare l’effetto di eventuali errori di misurazione del satellite.
 
 Per mantenere traccia degli ultimi N campioni di accelerazione è necessario dunque implementare un “Circular Buffer”.
@@ -4111,13 +4110,13 @@ La formula del calcolo del modulo quadro dei valori medi di accelerazione del sa
 
 \section{Test dell'algoritmo di controllo di raggiungimento dell'orbita}
 
-In questa sezione è stato analizzato l'algoritmo di raggiugimento dell'orbita, simulando una situazione realistica di utilizzo.
+In questa sezione è stato analizzato l'algoritmo di raggiungimento dell'orbita, simulando una situazione realistica di utilizzo.
 
 Il codice è stato dunque testato tramite un main di test in cui sono state utilizzate tutte le funzioni necessarie per calcolare il valore medio di accelerazione.
 
 I valori di input utilizzati per il test sono una serie di campioni generati casualmente.
 
-Il codice di test è stato compilato utilizzando un compilatore gcc 9.7.0 ,o ovvero la versione ad oggi più aggiorata, ma è replicabile anche con versioni precedenti di compilatore gcc ed utilizza unicamente librerie standard.
+Il codice di test è stato compilato utilizzando un compilatore gcc 9.7.0, ovvero la versione ad oggi più aggiornata, ma è replicabile anche con versioni precedenti di compilatore gcc o altri compilatori ed utilizza unicamente librerie standard.
 
 L'obiettivo finale di questo test è stato quello di valutare la correttezza del codice eseguito, ponendoci da oracolo e valutando tramite l'osservazione diretta la correttezza dell'algoritmo di raggiungimento dell'orbita.
 
@@ -4132,7 +4131,6 @@ A prescindere dalla modalità di test, i requisiti che il sistema dovrà garanti
     \item Salvataggio di ogni singolo campione all'interno del Circular Buffer.
     
     \item Calcolo della media dei valori immagazzinati.
-    
 \end{itemize}
 
 
@@ -4143,7 +4141,6 @@ Acceleration.h:
 \begin{lstlisting}[language=C]
 #ifndef ACCELERATION_H_
 #define ACCELERATION_H_
-
 
 //il valore (modulo quadro) massimo da confrontare con il valore corrente di accelerazione (servirÃ  un valore molto piÃ¹ basso)
 #define THRESHOLD_ACCELERATION 5 // [ m^2*sec^-4 ]
@@ -4192,7 +4189,6 @@ uint8_t full;
 
 CircularBuffer accelerationBuffer;
 
-
 uint8_t isSatelliteInSpace();
 
 #endif
@@ -4228,7 +4224,6 @@ void setAbsAcceleration()
     addAcceleration(&absAccelerationValue);
 }
 
-
 int32_t getAbsAcceleration()
 {
 
@@ -4246,7 +4241,6 @@ int32_t getAbsAcceleration()
     result = (int32_t) floor( sqrt(xFloat * xFloat + yFloat * yFloat + zFloat * zFloat ) ) ;
     return result;
 }
-
 
 int32_t getMeanAcceleration()
 {
@@ -4271,7 +4265,6 @@ int32_t getMeanAcceleration()
     return result;
 }
 
-
 uint8_t checkAccelerationAtStartTime()
 {
 
@@ -4284,10 +4277,6 @@ uint8_t checkAccelerationAtStartTime()
         return 0;
     }
 }
-
-
-
-
 
 uint8_t isSatelliteInSpace()
 {
@@ -4310,7 +4299,7 @@ uint8_t isSatelliteInSpace()
 \end{small}
 \subsection{Test comparativo per il calcolo del valore medio tramite il Circular Buffer}
 
-Data la semplicità del componente software, il test di funzionamento è stato eseguito tramite compilatore gcc ed direttamente da terminale Linux. La scelta è stata possibile poiché il suo test non necessita di nessuna libreria esterna.
+Data la semplicità del componente software, il test di funzionamento è stato eseguito tramite compilatore gcc e direttamente da terminale Linux. La scelta è stata possibile poiché il suo test non necessita di nessuna libreria esterna.
 
 Il test è consistito nella creazione della zona di memoria \textbf{"accelerationBuffer"}, inizialmente vuota e quindi inizializzata con i valori di default.
 
@@ -4404,7 +4393,7 @@ int32_t getAbsAcceleration(int32_t x, int32_t y, int32_t z)
 \subsection{Confronto dei risultati dei test con implementazione di libreria boost}
 
 In questa sezione l'obiettivo è stato, come abbiamo detto in precedenza, generare dei valori di uscita corretti da confrontare con i valori già precedentemente calcolati.
-Per fare ciò abbiamo utilizzato un'altra implementazione di Circular Buffer di libreria ritenuta quindi senza bug. Il nostro compito è stato generare un main che a partire dagli stessi input generasse degli output attraverso le stesse operazioni matematiche.
+Per fare ciò abbiamo utilizzato un'altra implementazione di Circular Buffer di libreria ritenuta quindi senza bug e dunque corretto. Il nostro compito è stato generare un main che a partire dagli stessi input generasse degli output attraverso le stesse operazioni matematiche.
 
 La libreria utilizzata è chiamata \textbf{"Boost"}, una libreria di codice per il linguaggio di programmazione C++.
 
@@ -4470,9 +4459,9 @@ int main(){
 \newpage
 \subsection{Rappresentazione grafica dei valori di accelerazione media ottenuta in Matlab}
 
-Per confrontare graficamente i risultati ottenuti, abbiamo generato uno script Matlab che utilizzasse i file generati e quindi plottasse i valori di output immagazzinati.
+Per confrontare graficamente i risultati ottenuti, è stato utilizzato uno script Matlab per graficare i valori conservati nei file precedentemente generati negli script di test.
 
-Lo script è diviso in due parti:
+Lo script di Matlab è dunque diviso in due parti:
 \begin{itemize} 
 \item Nella prima parte i valori di accelerazione media (in viola) vengono confrontati con il valori di soglia di accelerazione (in verde). L'accelerazione media dopo circa 0.1 sec risulta inferiore al valore di soglia e quindi il risultato concorda con quello uscito dal codice di test C. L'obiettivo è stato valutare la correttezza sulla scelta di superamento della soglia di accelerazione media dopo un determianto periodo di tempo.
     
@@ -4482,9 +4471,9 @@ Lo script è diviso in due parti:
     \label{fig}
     \end{figure}
 \newpage
-    \item Nella seconda parte abbiamo confrontato il set di output proveniente dal codice di test con i valori calcolati con l'implementazione C++,figura 6.4. In tale immagine è possibile notare una differenza nell'output soltanto in rari casi. Questo potrebbe essere dovuto ad alcuni arrotondamenti ad intero eseguiti in modo differente dai due sistemi.
+    \item Nella seconda parte abbiamo confrontato il set di output proveniente dal codice di test con i valori calcolati con l'implementazione C++ (vedi figura 6.4). In tale immagine è possibile notare una differenza nell'output soltanto in rari casi. Questo potrebbe essere dovuto ad alcuni arrotondamenti ad intero eseguiti in modo differente dai due sistemi.
 
-    In generale, la percentuale di errore per il test eseguito è del 3\%, un valore accettabile specialmente per un algoritmo utilizzato una singola volta all'avvio.
+    In generale, la percentuale di errore nel confronto tra valori teorici e valori calcolati per il test eseguito è circa del 3\%, un valore accettabile specialmente per un algoritmo utilizzato una singola volta all'avvio e che dunque crea un ritardo temporale ci accensione solo alla prima accensione.
     
     \begin{figure}[htbp]
     \centerline{\includegraphics[scale=0.4]{examples/CompareAlgorithResult.png}}
@@ -4558,121 +4547,112 @@ Il file main.c:
 #pragma CODE_SECTION(main,".text_bootloader")
 
 /*
- * TO DO
- * 1) define status register
- * 2) define FLASH memory usage and map (experiments, telemetry, hamradio...)
- * 3) define opmodes and change criteria (baud rate, power...)
- * 4) define experiments_set and experiment structures
- * 5) organize memory scrubs and spare boot codes
- * 6) define controlled reboots and actions in case of errors
- * 7) define events (refer to STECCO code)
- *
- * */
-
-/*
  * Main routine
  * After initialization the satellite checks if there are tasks to do 
  * and eventually goes to sleep.
  * If there is an interrupt that awakes the satellite the loop is executed
  * checking what has to be done before going back to sleep
  */
+ 
+#PRAGMA PERSISTENT(satelliteInOrbitFlag)
+uint8_t satelliteInOrbitFlag = 0;
 int main(void)
 {
     // Stop watchdog timer
     WDTCTL = WDTPW | WDTHOLD;
 
-//    //Check memory status
+    //Check memory status
     int8_t bootResult = bootloaderStart();
 
 
     uint8_t scrubMemory = scrubbingRoutine();
-//    //Hardware initialization
-//    //with diagnostics
-//    //WDT enabled here
+    //Hardware initialization
+    //with diagnostics
     satsystem_init();
-//
+
     AB_LED_OFF;
-//
-//    //Check flight status and boot into preprogrammed sequence
+
+    //Check flight status and boot into preprogrammed sequence
     bootFlightStatus();
-//
+
     int8_t systemDiagnostic = selfDiagInit();
-//    //Enter main loop
 
-    uint8_t isSatelliteInOrbit = isSatelliteInSpace();
 
+    uint8_t isSatelliteInOrbit;
+    if(satelliteInOrbitFlag) {
+        isSatelliteInOrbit = isSatelliteInSpace();
+        satelliteInOrbitFlag = 0xff;
+    }
+    //Enter main loop
     while (1)
     {
-//        //Kick the WDT again
+        //Kick the WDT again
         WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
-        //Data from MARIE? Store them in FLASH
-        //*** really need to do it here?
-        //*** it could be done without wakeup probably
-        //checkMarie();
+        checkMarie();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check commands on debug UART or on Radio UART
-        //checkRadio();
+        checkRadio();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check commands on debug UART or on Radio UART
-        //checkDebugCommand();
+        checkDebugCommand();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Check satellite status and update if necessary
-        //checkStatus();
+        checkStatus();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to do a new step of an experiment?
-        //checkExperiment();
+        checkExperiment();
 
         //Kick the WDT again
-       // WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Digipeater action?
-        //checkRadioHam();
+        checkRadioHam();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to read telemetry?
-        //checkTelemetry();
+        checkTelemetry();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
         //Time to send beacon?
-        //checkBeacon();
+        checkBeacon();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
-        //checkMemoryOp();
+        checkMemoryOp();
 
         //Kick the WDT again
-        //WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
+        WDTCTL = (WDTCTL & 0x00FF) | WDTPW | WDTCNTCL;
 
-        //check_minute_counter();
+        check_minute_counter();
 
-        //AB_LED_OFF;
-//
-        //timer_goToSleep();
-//
+        AB_LED_OFF;
+
+        timer_goToSleep();
+
         if (satelliteConfiguration_.debugIsOn == 1)
             AB_LED_ON;
     }
-//
-//    //It will never arrive here fortunately
-//    //return 0;
+
+    //It will never arrive here fortunately
+    return 0;
 }
 \end{lstlisting}
 \end{small}
@@ -4692,23 +4672,22 @@ del sistema e la sua tolleranza rispetto ad eventuali malfunzionamenti dei singo
 L'algoritmo di Scrubbing implementato su uno schema a blocchi di dati piccoli permette inoltre una facile scalabilità del sistema. L'algoritmo che
 si occupa della rivelazione e/o della correzione di singole, doppie e addirittura triple corruzioni all'interno di
 singoli blocchi ha un costo algoritmico sia temporale che spaziale di tipo lineare rispetto alla scelta del numero di blocchi che si sceglie di 
-proteggere. L'utilizzo di un algoritmo di parità quadridimensionale fornisce dunque un ottimo compromesso nel confronto tra performance dell'algoritmo (e
+proteggere. 
+
+Inoltre, tramite test è stato possibile evidenziare che, a parità di grandezza di memoria da proteggere, la probabilità di avere un backup integro diminuisce all'aumentare della frequenza di corruzioni che avvengono nella zona di backup nel periodo intercorso tra due scrubbing della memoria di backup.
+
+L'utilizzo di un algoritmo di parità quadridimensionale fornisce dunque un ottimo compromesso facendo un confronto tra performance dell'algoritmo (e
 quindi protezione della memoria dati) e occupazione di memoria.
 
 Un altro sviluppo molto importante ha riguardato il controllo e la gestione di eventuali malfunzionamenti per quanto riguarda la parte di sensoristica 
-e di memoria flash connessa al microcontrollore. Tale algoritmo di autodiagnosi del sistema ha fornito una semplice ma efficace strategia rispetto
-alla impossibilità di comunicazione con un determinato sottosistema garantendo la sua esclusione e quindi limitando la probabilità per cui un singolo
-malfunzionamento generasse il blocco dell'intero sistema.
+e di memoria flash connessa al microcontrollore. Tale algoritmo di autodiagnosi del sistema ha fornito una semplice ma efficace strategia di diagnosi della comunicazione con un determinato sottosistema garantendo la sua continua esclusione in presenza di guasti e quindi limitando la probabilità per cui un singolo malfunzionamento generasse il blocco dell'intero sistema.
 
 Infine l'utilizzo di un algoritmo di controllo del raggiungimento dell'orbita del satellite ha fornito un controllo aggiuntivo rispetto alla remota possibilità
-di accensione non voluta del satellite. Questo evento avrebbe causato nel migliore dei casi uno spreco di potenza e nel peggiore dei casi la rottura del satellite
+di accensione non voluta del satellite. Questo evento non voluto causerebbe nel migliore dei casi uno spreco di potenza e nel peggiore dei casi la rottura del satellite
 prima dell'inizio della missione.
 
 Contando che il sistema non sia controllabile dall'esterno e quindi faccia affidamento quasi unicamente sul suo computer di bordo per poter gestire 
-l'andamento della missione spaziale e nonostante non sia possibile determinare con certezza l'entità e la frequenza dei malfunzionamenti software 
-e delle rotture hardware causate da fenomeni come le radiazioni cosmiche a cui il satellite sarà sottoposto durante la missione in orbita Terrestre, 
-il sistema ha raggiunto un grado di robustezza notevolmente maggiore rispetto a quello che aveva precedentemente, ovvero rispetto allo stesso sistema che le aveva già permesso 
-di superare con buoni risultati diverse missioni spaziali.
+l'andamento della missione spaziale, il sistema ha raggiunto un grado di robustezza notevolmente maggiore rispetto a quello che aveva precedentemente, ovvero rispetto allo stesso sistema che le aveva già permesso di superare con buoni risultati diverse missioni spaziali.
 \section{Possibili sviluppi futuri}
 Tutto lo sviluppo software è stato implementato direttamente sul microcontrollore sprovvisto della maggior parte dei sottosistemi utilizzati durante la missione. Un possibile
 sviluppo futuro potrebbe essere l'integrazione di ogni singolo componente software all'interno di un sistema completo. Tale approccio garantirebbe maggiore contezza
@@ -4722,39 +4701,36 @@ aspetto che garantirebbe sicuramente una vita del satellite notevolmente più lu
 \chapter{Gestione di una sezione di firmware Persistent o Noinit}
 
 \subsection{Passo 1: Dichiarazione della variabile}
-Il primo passo in un codice C da compiere è dunque dichiarare la variabile voluta come uan variabile globale "Persistent" o "Noinit" (per cui la procedura è analoga). In questo modo la variabile non verrà inserita dal compilatore all'interno della sezione .bss (le variabili globali inizializzate a 0 per default) ma sarà inserita in una particolare zona di memoria indipendente che definiremo successivamente che permetterà al microcontrollore di non inizializzare il valore ad software reset
-e di mantenere così inalterato il contenuto informativo.
+Il primo passo in un codice C da compiere è dunque dichiarare la variabile voluta come uan variabile globale "Persistent" o "Noinit" (per cui la procedura è analoga). In questo modo la variabile non verrà inserita dal compilatore all'interno della sezione .bss (le variabili globali inizializzate a 0 per default) ma sarà inserita in una particolare zona di memoria indipendente che definiremo successivamente e che permetterà al microcontrollore di non inizializzare il valore ad ogni software reset che il sistema genererà periodicamente o in presenza di guasti o malfunzionamenti.
 
 
 Prendiamo come esempio la dichiarazione in un semplice main:
 \begin{lstlisting}[language=C]
     #pragma PERSISTENT(var)  
     unsigned long var=0;  
-      
     SYSCFG0 = FRWPPW | DFWP;           
-    var++;                             
+    var++;   
     SYSCFG0 = FRWPPW | PFWP | DFWP; 
 
 \end{lstlisting}
+\vspace{2cm}
+\begin{small}
+Linea 01 e 02: vanno a definire la variabile "var". La definizione \textt{#Pragma PERSISTENT(var)} dicono al compilatore di allocare la variabile "var" in una zona dedicata di memoria. L'inizializzazione di questa variabile è del tutto simile ad una definita direttamente in RAM. (Nell'esempio è posta a 0).
+Si tratta dunque di un comando al "linker file" che andrà a definire in fase di linking la zona di memoria in cui allocare poi la variabile. Successivamente si occuperemo di definirlo anche nel file di linker script.\newline
 
-\footnote{
-Linea 01 e 02: vanno a definire la variabile "var". La definizione Pragma PERSISTENT(var) dicono al compilatore di allocare la variabile "var" in una zona dedicata di memoria. L'inizializzazione di questa variabile è del tutto simile ad una definita direttamente in RAM. (Nell'esempio è posta a 0).
-}
-\footnote{
-Si tratta dunque di un comando al "linker file" che andrà a definire in fase di linking la zona di memoria in cui allocare poi la variabile. Successivamente si occuperemo di definirlo anche nel file di linker script.}
-\footnote{
-Linea 04 e 06: andiamo ad esempio a definire un comando che permette la scrittura in FRAM. La scrittura viene poi disabilitata successivamente alla riga 06.
-}
-\footnote{
-Linea 05: un semplice comando di incremento. La variabile può essere dunque trattata come qualsiasi altra semplice variabile locale o globale.
-}
+Linea 03 e 05: andiamo ad esempio a definire un comando che permette la scrittura in FRAM. La scrittura viene poi disabilitata successivamente alla riga 05.\newline
+
+Linea 04: un semplice comando di incremento. La variabile può essere dunque trattata come qualsiasi altra semplice variabile locale o globale.\newline
+
+\end{small}
+
 
 \clearpage
 L'accesso ad una variabile il FRAM è totalmente analogo all'accesso alle classiche variabili site in RAM.
 
 Lo sblocco della scrittura ed il successivo blocco è un passo totalmente opzionale anche se consigliato. L'idea è che se qualcosa di non voluto accidentalmente accade, la scrittura è ancora disabilitata e il contenuto della variabile persistent non viene alterato.
 
-La pragma PERSISTENT permette dunque di memorizza i dati in FRAM quando il processore entra nel suo sonno più profondo.
+La pragma PERSISTENT permette dunque di memorizza i dati in FRAM quando il processore entra in sleep mode.
 Quindi un possibile utilizzo è mettere al sicuro il contenuto delle variabili memorizzate nella RAM statica nella FRAM. (O sull'MSP430, tenerle direttamente in FRAM).
 
 Ci sono alcuni costi di consumo energetico. Il salvataggio su FRAM richiede più energia rispetto alla RAM. Inoltre, è necessario che ci siano 10 $\mu s$ dopo l'uscita da alcune modalità di sospensione prima di poter salvare nuovamente su FRAM.
@@ -5002,13 +4978,13 @@ scaricabile e utilizzabile.
 
 Per poter usufruire del codice è necessario aver installato uan versione di Github.
 
-Questi sono i passi che permettono di copiare e poter utilizzare in ambiente Linux (per Windows 10 è utile scaricare MingW 
-il quale permette di usufruire di un command prompt analogo a quello di linux):
+Questi sono i passi che permettono di copiare e poter utilizzare in ambiente Linux (per Windows 10 è utile scaricare MingW, strumento per windows che ci permette di sfruttare il compilatore gcc e inoltre un prompt dei comandi analogo a quello di linux).
+I passi da eseguire per poter disporre del progetto e di tutti i test relativi ad ogni nuova feature sono:
 
 \begin{itemize}
      \item Su GitHub, navigare sulla pagina principale della repository voluta.
     
-    \item creare una cartella in cui inserire il progetto da scaricare e entrarci dentro con i seguenti comandi:
+    \item Creare una cartella in cui inserire il progetto da scaricare e entrarci dentro con i seguenti comandi:
     \begin{verbatim}
 
             $ mkdir myDirectory
@@ -5019,7 +4995,7 @@ il quale permette di usufruire di un command prompt analogo a quello di linux):
     \end{verbatim}
     \item Copiare il contenuto del progetto git nella cartella attuale:
         \begin{verbatim}
-            $ git clone https://github.com/bindella94/Tesi
+            $ git clone https://github.com/bindella1994/Thesis.git
         \end{verbatim}
 \end{itemize}
 
