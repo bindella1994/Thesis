@@ -2,7 +2,7 @@
 % !TeX program = pdflatex
 % !TeX spellcheck = it_IT
 
-\documentclass[LaM,binding=0.6cm]{../sapthesis}
+\documentclass[LaM,binding=0.6cm,oneside]{../sapthesis}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{microtype}
@@ -17,16 +17,16 @@
 \hypersetup{pdftitle={Esempio d'uso della classe Sapthesis per una tesi di Laurea Magistrale},pdfauthor={Manuel Bannella}}
 
 % Remove in a normal thesis
-\usepackage{lipsum}
+%\usepackage{lipsum}
 \usepackage{curve2e}
 \definecolor{gray}{gray}{0.4}
-\newcommand{\bs}{\textbackslash}
+%\newcommand{\bs}{\textbackslash}
 
 
 % Commands for the titlepage
 \title{Progettazione e sviluppo di un sistema per la verifica
 dell’integrità hardware e
-firmware di un picosatellite}
+firmware di un Nanosatellite}
 \author{Manuel Bannella}
 \IDnumber{1619174}
 \course{Ingegneria Elettronica}
@@ -56,6 +56,7 @@ informatica e statistica}
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
 \definecolor{mymauve}{rgb}{0.58,0,0.82}
 
+
 \lstset{ %
   backgroundcolor=\color{white},   % choose the background color
   basicstyle=\footnotesize,        % size of fonts used for the code
@@ -66,8 +67,6 @@ informatica e statistica}
   keywordstyle=\color{blue},       % keyword style
   stringstyle=\color{mymauve},     % string literal style
 }
-
-
 
 \begin{document}
 
@@ -87,27 +86,28 @@ informatica e statistica}
 
 Questo lavoro di tesi magistrale si propone di sviluppare un sistema di controllo della consistenza dei dati di un "Sistema Embedded"\footnote{Sistema Embedded: sistema spesso parte integrante di sistemi più grandi progettato per svolgere un compito preciso e determinato (a differenza di quanto succede nei sistemi general purpose)} ed in particolare cerca di risolvere problemi relativi alla "reliability" di computer di bordo dedicato ad applicazioni aerospaziali.
 
-Grazie allo sviluppo tecnologico raggiunto negli ultimi decenni ed in particolare in ambito dell'elettronica digitale, anche applicazioni specifiche di ambito aerospaziale come ad esempio lo sviluppo firmware di "Picosatelliti"\footnote{Picosatellite: i picosatelliti o picosat sono satelliti miniaturizzati insolitamente piccoli e leggeri, con una massa compresa tra 100 grammi e 1 kg} ha potuto beneficiare dell'aumento delle prestazioni e del rimpicciolimento dei singoli componenti hardware. 
+Grazie allo sviluppo tecnologico raggiunto negli ultimi decenni ed in particolare in ambito dell'elettronica digitale, anche applicazioni specifiche di ambito aerospaziale come ad esempio lo sviluppo firmware di "Nanosatelliti"\footnote{Nanosatellite: i nanosatelliti o picosat sono satelliti miniaturizzati insolitamente piccoli e leggeri, con una massa compresa tra 100 grammi e 1 kg} hanno potuto beneficiare sia dell'aumento delle prestazioni dei singoli componenti che della sempre maggiore miniaturizzazione dei singoli componenti hardware. 
 
 Come conseguenza anche sistemi a risorse limitate hanno potuto sviluppare applicazioni firmware sempre più complesse e raffinate.
 
-L'ambiente spaziale ed in particolare zone del cosmo come le fasce di Van Allen rappresenta però una sfida per quanto riguarda problemi di consistenza della memoria dell'intero sistema. Le radiazioni cosmiche possono infatti generare corruzioni all'interno del firmware.
+L'ambiente spaziale ed in particolare zone del cosmo come le fasce di "Van Allen" rappresentano tutt'ora una sfida per quanto riguarda problemi di radiazioni spaziale e conseguente problemi relativi alla consistenza della memoria dell'intero sistema. Le radiazioni cosmiche possono infatti generare corruzioni all'interno di ogni componente hardware ed in particolare nelle zone di memorie volatili.
 
-In questo lavoro sono state usate diverse tecniche software con l'obiettivo di rilevare e correggere eventuali errori e malfunzionamenti del sistema hardware: - utilizzo di ridondanza software (di copie dello stesso firmware), - protezione dell'informazione tramite algoritmi di rilevazione e correzione dell'errore, - diagnostica ed eventuale esclusione dei sottosistemi non correttamente funzionanti.
+In questo lavoro sono state usate diverse tecniche software con l'obiettivo di rilevare e correggere eventuali errori e malfunzionamenti del sistema hardware ed in particolare: - utilizzo di ridondanza software (di copie dello stesso firmware), - protezione dell'informazione tramite algoritmi di rilevazione e correzione dell'errore, - diagnostica ed eventuale esclusione dei sottosistemi non correttamente funzionanti.
 
 L'approccio utilizzato durante l'implementazione di ogni singola tecnica ha cercato di rispettare gli standard di programmazione utilizzati per questi ambiti specifici (in particolare lo standard "Misra C"\footnote{Misra C :  standard di buona programmazione per software che richiedono un grado di affidabilità superiore rispetto alle applicazioni generiche} )
-ed inoltre ogni nuovo sviluppo ha superato una serie di test di valutazione delle prestazioni che di rispetto dei requisiti richiesti da questi tipi di applicazioni.
+ed inoltre ogni nuovo sviluppo ha superato una serie di test creati con l'obiettivo di valutare sia le prestazioni software, sia il rispetto dei requisiti richiesti per il tipo di applicazione richiesta.
 
-I risultati ottenuti durante la fase di testing dei diversi applicativi hanno determinato un sensibile irrobustimento di tutto il firmware. Sebbene non sia stato possibile determinare sul microcontrollore i fattori come il consumo di memoria e di tempo, data l'impossibilità di simulare una situazione reale di volo, l'architettura software è stato resa il più possibile scalabile in modo da determinare un compromesso tra i fattori precedentemente espressi e la protezione del sistema.
+I risultati ottenuti durante la fase di testing dei diversi applicativi hanno determinato un sensibile irrobustimento di tutto il firmware. Sebbene non sia stato possibile determinare sul microcontrollore i fattori come il consumo di memoria e di tempo (data l'impossibilità di simulare una situazione reale di volo), l'architettura software è stata resa il più possibile scalabile e quindi modificabile in base ai risultati di integrazioni del firmware con il sistema reale.
+In generale, l'architettura di controllo delle corruzioni sul sistema a tenuto conto di un compromesso tra fattori quali l'occupazione di memoria, l'occupazione temporale della cpu e la protezione del sistema.
 \end{abstract}
 
-\begin{acknowledgments}
-DA COMPLETARE
-Ho deciso di scrivere i ringraziamenti in italiano
-per dimostrare la mia gratitudine verso i membri
-del GuIT, il Gruppo Utilizzatori Italiani di \TeX, e, in particolare,
-verso il prof. Enrico Gregorio.
-\end{acknowledgments}
+%\begin{acknowledgments}
+%DA COMPLETARE
+%Ho deciso di scrivere i ringraziamenti in italiano
+%per dimostrare la mia gratitudine verso i membri
+%del GuIT, il Gruppo Utilizzatori Italiani di \TeX, e, in particolare,
+%verso il prof. Enrico Gregorio.
+%\end{acknowledgments}
 
 \tableofcontents
 
@@ -119,35 +119,34 @@ verso il prof. Enrico Gregorio.
 \chapter{Introduzione}
 Nell' ottobre 2020, tramite il professor Mauro Olivieri sono riuscito a discutere con il professor Augusto Nascetti riguardo a possibili tesi magistrali per il corso di Ingegneria Elettronica. 
 
-La mia intenzione di approfondire le conoscenze riguardo la scrittura di firmware per sistemi digitali Embedded calzava a pennello con uno degli sviluppi che il professore, in quel periodo, coordinava nel suo laboratorio sito nella sede di Ingegneria Aerospaziale in via Salaria. Lo sviluppo riguardava per l'appunto un \textbf{picosatellite} chiamato  \textbf{"CubeSat"}, ovvero ovvero un satellite di dimensioni ridotte composto da una parte meccanica che elettronica già precedente utilizzato e sviluppato dallo stesso laboratorio. 
+La mia intenzione di approfondire le conoscenze riguardo la scrittura di firmware per sistemi digitali Embedded calzava a pennello con uno degli sviluppi che il professore, in quel periodo, coordinava nel suo laboratorio sito nella scuola di Ingegneria Aerospaziale in via Salaria. Lo sviluppo riguardava per l'appunto un \textbf{Nanosatellite} chiamato \textbf{"CubeSat"}, ovvero ovvero un satellite di dimensioni ridotte composto sia da una parte meccanica che elettronica e precedente già utilizzato e sviluppato dallo stesso laboratorio. 
 
-Il progetto aveva l'obiettivo di eseguire una serie di esperimenti nel periodo di viaggio del satellite attorno all'orbita Terrestre. L'obiettivo era quello di raccogliere ciclicamente dati di natura chimica. La parte di firmware dedita a questo obiettivo era già stata sviluppata all'interno del codice fornito dal professore. 
+Il progetto ABACUS, ovvero un sottosistema "On-Board Computer" sviluppato in quel periodo dalla Scuola di Ingegneria Aerospaziale, era infatti contenuto all'interno del modello CubeSat 3U (ovvero un Nanosatellite di dimensioni pari a 30x10x10 cm). 
 
-Il mio obiettivo era diverso e riguardava principalmente l'attività di preservazione della consistenza dei dati del computer di bordo, poiché il satellite in questo caso doveva attraversare le cosiddette \textbf{"Fasce di Van Allen"}, una regione di spazio lontano dalla Terra (con un' altitudine compresa tra il migliaio di chilometri fino un limite esterno che supera i 40.000 km rispetto alla Terra), dunque una zona di cosmo molto diversa rispetto alle missioni precedenti poiché la quantità di radiazioni presenti era notevolmente superiori ad altre zone di spazio. 
+Il progetto era stato finanziato gratuitamente da ISA e ESA ("Agenzia Spaziale Italiana" e "Europea") e richiedeva un nuovo obiettivo di missione da superare: la missione spaziale avrebbe dovuto infatti sorvolare delle particolare zone della magnetosfera terrestre chiamate "Fasce di Van Allen", ovvero delle zone di spazio soggette a notevoli dosi di radiazioni ionizzante. Per accertare la tolleranza del satellite a tali nuove condizioni, il computer avrebbe dovuto compiere degli esperimenti di natura biochimica atti a testimoniare il superamento della missione. 
 
-Queste fasce possono essere rappresentate essenzialmente come un toroide di particelle cariche site all'interno della magnetosfera terrestre e le radiazioni sono trattenute per effetto della \textbf{"forza di Lorentz"}. 
+Il mio obiettivo non riguardava però la gestione degli esperimenti, essendo questa parte già implementata, ma riguardava invece l'attività di preservazione della consistenza dei dati del computer di bordo. L'energia cinetica intrappolata da questa fascia infatti portava statisticamente delle collisioni tra le componenti hardware e le particelle intrappolate (protoni nelle fasce più basse delle fasce ed elettroni in più esterne) e conseguente poteva causare problemi di corruzione della memoria. 
 
-Il problema principale di questa missione rispetto alle precedenti riguardava la consistenza della informazioni presenti nella memoria del satellite, la quale veniva perturbata dall'effetto sull'hardware dell'energia cinetica intrappolata da questa fascia. Poiché il satellite seguiva una traiettoria attorno alla Terra che gli permetteva di uscire e rientrare in queste fasce, il problema era periodico.
+Poiché il satellite seguiva una traiettoria attorno alla Terra che gli permetteva di uscire e rientrare in queste fasce, il problema di possibile inconsistenza della memoria era periodico e doveva essere dunque controllato per ogni singolo attraversamento di queste particolari zone.
 
-L'obiettivo del nostro lavoro di tesi è stato dunque la scrittura di una parte di firmware capace di mantenere una struttura codice e dati il più protetta possibile da eventuali corruzioni. Questa necessità ha portato alla definizione di una procedura di tolleranza di corruzioni/malfunzionamenti necessaria per il mantenimento delle funzioni del satellite per un periodo di tempo più lungo possibile. 
+L'obiettivo del nostro lavoro di tesi è stato dunque la scrittura di una parte di firmware capace di mantenere il codice e dati immagazzinati il più possibile protetti da eventuali corruzioni. Questa necessità ha portato alla definizione di una procedura di tolleranza di corruzioni/malfunzionamenti necessaria per il mantenimento delle funzioni del satellite atte a mantenerlo in funzione per un periodo di tempo più lungo possibile. 
 
-Per fare ciò la prima parte dell'attività di tesi ha riguardato un periodo di studio dello stato dell'arte dei sistemi elettronici, con particolare attenzione all'ambito delle problematiche di \textbf{"reliability"}, ovvero la probabilità che un sistema esegua con successo le azioni per cui è stato progettato per un periodo di tempo definito a priori. Questa caratteristica dei sistemi elettronici ha un'importanza particolare nell'ambito sia di applicazioni aerospaziali, di quelle navali ma anche in ambito spaziale: tutti questi ambiti richiedono come caratteristica principale sistemi il più possibile sicuri e capaci di rispondere ad eventuali guasti e malfunzionamenti.
+Per fare ciò la prima parte dell'attività di tesi ha riguardato un periodo di studio dello stato dell'arte dei sistemi elettronici, con particolare attenzione all'ambito delle problematiche di \textbf{"reliability"}, ovvero la probabilità che un sistema esegua con successo le azioni per cui è stato progettato per un periodo di tempo definito a priori. Questa caratteristica dei sistemi elettronici ha un'importanza particolare nell'ambito sia di applicazioni aerospaziali, come quelle navali: tutti questi ambiti richiedono come caratteristica principale sistemi il più possibile sicuri e capaci di rispondere ad eventuali guasti e malfunzionamenti.
 
-La scrittura del firmware ha cercato di rispettare nel modo più appropriato possibile le regole di \textbf{Misra C}, ovvero delle regole di corretta scrittura di codice definiti per questi ambiti e che fanno riferimento a strutture di codice solide e facili da essere lette e "debuggate" (testate e corrette) anche da altre persone. Questa caratteristica è necessaria nei settori in cui l'attività di testing del codice è spesso eseguita da personale esterno rispetto a quello che scrive il firmware, in modo da garantire imparzialità nella validazione del codice eseguito e dunque una maggiore affidabilità dello stesso.
+La scrittura del firmware ha cercato di rispettare nel modo più appropriato possibile le regole di \textbf{Misra C}, ovvero delle regole di corretta scrittura di codice definiti per questi ambiti e che fanno riferimento a strutture di codice solide e facili da essere lette e "debuggate" (testate e corrette) anche da altre persone. Questa caratteristica è necessaria nei settori in cui l'attività di testing del codice è spesso eseguita da personale esterno rispetto a quello che scrive il firmware, in modo da garantire imparzialità nella validazione del codice eseguito e dunque una maggiore affidabilità delle funzionalità implementate.
     
 L'elaborato prodotto durante l'attività di tesi di laurea è volutamente strutturato in maniera da approfondire singolarmente ogni ambito di ricerca sviluppato e/o testato durante il periodo Ottobre 2020/Maggio 2021.
-Ogni capitolo dunque affronta una parte dello sviluppo che poi infine viene integrato nel cosiddetto \textbf{"main"} del codice, ovvero la funzione principale che il satellite esegue continuamente durante il suo funzionamento e che attiva le applicazioni richieste.
+Ogni capitolo dunque affronta una parte dello sviluppo che poi infine viene integrata nel cosiddetto \textbf{"main"} del codice, ovvero la funzione principale che il satellite esegue continuamente durante il suo funzionamento e che attiva le applicazioni richieste.
     
-La struttura di ogni capitolo di compone dunque delle seguenti sottosezioni:
+La struttura di ogni capitolo si compone dunque delle seguenti sottosezioni:
 \begin{itemize}
     \item spiegazione del problema da risolvere;
-    \item ricerca di possibili implementazioni e scelta delle più appropriate da poi implementare, eseguendo se possibile un confronto di prestazioni tra i diversi algoritmi;
+    \item ricerca di possibili implementazioni e scelta delle più appropriate da poi implementare, eseguendo se possibile un confronto tra i diversi algoritmi;
     \item spiegazione passo passo del codice C;
     \item test in modalità di debug utilizzando quando possibile direttamente l'hardware del codice descritto con valutazione dei risultati;
     \end{itemize}
     
-In conclusione, il lavoro di tesi ha portato dei notevoli miglioramenti al firmware di bordo del satellite CubeSat. Le parti più importanti della memoria del sistema Abacus sono protette con una buona probabilità dalle radiazioni attraverso un sistema di risoluzione dei malfunzionamenti. Anche in caso di malfunzionamenti, il sistema tende a limitare la frequenza dei reset che il sistema esegue in modo da garantire un utilizzo del satellite il più lunga possibile. 
-
+In conclusione, il lavoro di tesi ha portato dei notevoli miglioramenti al firmware di bordo del satellite CubeSat. Le parti più importanti della memoria del sistema ABACUS sono protette con una buona probabilità dalle radiazioni attraverso un sistema di risoluzione dei malfunzionamenti. Anche in caso di malfunzionamenti, il sistema tende a limitare la frequenza dei reset che il sistema esegue in risposta a eventualie problemi, in modo da garantire un utilizzo del satellite il più lunga possibile. 
 L'architettura del codice inserito all'interno del firmware ha tenuto dunque conto del compromesso tra robustezza di codice e dati del microcontrollore e \textbf{carico della nuova parte di codice } su tutto il firmware. Un occupazione temporale troppo prolungata dell'attività di protezione e recupero dell'informazione avrebbe limitato l'attività di sperimentazione.
 
 
@@ -166,7 +165,7 @@ La famiglia \textbf{MSP430} è una famiglia di microcontrollori \textbf{ultralow
 La caratteristica principale è per l'appunto il risparmio di potenza consumata, poiché tutti i modelli prodotti dispongono di un \textbf{DCO} ("Digital Controlled Oscillator"), un'unità che permette il risveglio in modalità attiva dalla modalità definita come low-power mode con tempi dell'ordine dei microsecondi. 
 Questo meccanismo di elaborazione inframezzato da periodi di inattività e attesa permette di razionare il consumo di potenza media.
 
-L'architettura del microcontrollore usato per questa tesi, ovvero l' MSP430F5438A, consiste in una CPU ad architettura \textbf{RISC} ("Reduced Instruction Set Architecture") a 16 bit, 16 registri a 16 bit in cui possiamo evidenziare un registro chiamato "\textbf{Constant Generator}", un registro dedicato all'efficienza massima di codice. In esso infatti vengono immagazzinate delle costanti che possono essere utilizzate senza essere immagazzinate in memoria centrale, permettendo dunque di sostituire particolari istruzioni (come ad esempio l'incremento ad uno di un registro) e di limitare quindi la libreria di istruzioni che l'architettura utilizza.
+L'architettura del microcontrollore usato per questa tesi, ovvero l' MSP430F5438A, consiste in una CPU ad architettura \textbf{RISC} ("Reduced Instruction Set Architecture") a 16 bit, 16 registri a 16 bit in cui possiamo evidenziare un registro chiamato "\textbf{Constant Generator}", un registro dedicato all'efficienza massima di codice. In esso infatti vengono immagazzinate delle costanti che possono essere utilizzate senza essere necessariamente immagazzinate in memoria centrale, permettendo dunque di sostituire particolari istruzioni (come ad esempio l'incremento ad uno di un registro) e di limitare quindi la libreria di istruzioni che l'architettura utilizza (fattore determinante in un architettura RISC).
 
 La serie MSP430x sono inoltre microcontrollori configurati con 3 diversi timer a 16 bit, un analog-to-digital (A/D) converter a 12 bit, fino a quattro interfacce di comunicazione "USCI", ("Universal serial communication interfaces"), un moltiplicatore hardware, DMA ("Direct memory access") e fino a 87 pin di I/O.
 
@@ -182,7 +181,7 @@ Datasheet del microcontrollori della famiglia MSP430F543xA e MSP430F541xA
 
 \section{ Architettura del satellite Cubesat }
 
-Il sistema \textbf{Abacus} (nel nostro caso abbiamo utilizzato la versione 2017) è un'unità \textbf{On-board computer} con una piattaforma hardware general purpose, adatta per un'ampia
+Il sistema \textbf{ABACUS} (nel nostro caso abbiamo utilizzato la versione 2017) è un'unità \textbf{On-board computer} con una piattaforma hardware general purpose, adatta per un'ampia
 gamma di missioni satellitari. È progettato per essere flessibile e scalabile in termini di consumi di
 potenza. 
 
@@ -192,12 +191,12 @@ Il design del sistema offre la possibilità di riconfigurare il codice FPGA e il
 
     \begin{figure}[htbp]
     \centerline{\includegraphics[scale=.67]{examples/AbacusImage.PNG}}
-    \caption{Foto del sistema Abacus in cui è possibile apprezzare l'MCU MSP430F5438A e la FPGA Spartan-3E}
+    \caption{Foto del sistema ABACUS in cui è possibile apprezzare l'MCU MSP430F5438A e la FPGA Spartan-3E}
     \label{fig}
     \end{figure}
     \clearpage
     
-Queste sono le principali caratteristiche del sistema Abacus:
+Queste sono le principali caratteristiche del sistema ABACUS:
 \begin{itemize}
     \item \textbf{Due core} (MCU MSP430 e FPGA Spartan-3E) direttamente interconnessi attraverso con un textbf{bus a 24 linee};
     
@@ -210,7 +209,7 @@ Queste sono le principali caratteristiche del sistema Abacus:
     \item 4 x porte \textbf{COM} (di cui una anche nei livelli standard RS 422/485 Full o Half Duplex), 2 x \textbf{$I^2C$} e 1 x \textbf{SPI};
     
     \item \textbf{FPGA} funzionante a 25 MHz o 100 MHz (predefinito);
-    https://www.overleaf.com/project/6006a99f6967e0c12b852024
+
     \item Embedded \textbf{IMU} ("Inertial measurement unit") con \textbf{magnetometro},\newline \textbf{accelerometro} e \textbf{giroscopio} tutti triassiali;
     
     \item Sensori incorporati: 3 x \textbf{sensori di temperatura}, 1 x \textbf{monitor di corrente assorbita}, 1 Embedded \textbf{RTC} ("Real Time Clock");
@@ -218,41 +217,43 @@ Queste sono le principali caratteristiche del sistema Abacus:
 
     \begin{figure}[htbp]
     \centerline{\includegraphics[scale=.8]{examples/AbacusDiagram.PNG}}
-    \caption{Diagramma delle interconnessioni hardware in Abacus}
+    \caption{Diagramma delle interconnessioni hardware in ABACUS}
     \label{fig}
     \end{figure}
 \clearpage
 \chapter{Fault Tolerance}
-Nell'ingegneria dell'affidabilità la tolleranza ai guasti (o "\textbf{fault-tolerance}", dall'inglese) è la capacità di un sistema di non subire avarie (cioè interruzioni di servizio) anche in presenza di guasti. La tolleranza ai guasti è uno degli aspetti che costituiscono l'\textbf{affidabilità}. È importante notare che la tolleranza ai guasti non garantisce l'immunità da tutti i guasti, ma solo che i guasti per cui è stata progettata una protezione non causino fallimenti.
+Nell'ingegneria dell'affidabilità la tolleranza ai guasti (o "\textbf{fault-tolerance}", dall'inglese) è la capacità di un sistema di non subire avarie (cioè interruzioni di servizio) anche in presenza di guasti. La tolleranza ai guasti è uno degli aspetti che costituiscono l'\textbf{affidabilità} di un sistema. È importante notare che la tolleranza ai guasti non garantisce l'immunità da tutti i guasti, ma solo che i guasti per cui è stata progettata una protezione non causino conseguentemente dei  fallimenti.
 
 Questo concetto è molto studiato in applicazione elettroniche di ambito spaziale principalmente per due motivi:
 \begin{itemize}
     \item L'impossibilità in orbita della \textbf{riparazione} di parti software e hardware per un periodo di tempo molto lungo.
     
-    \item La presenza di \textbf{radiazioni ionizzanti} che sono localizzate nelle "Fasce Di Van Allen" che possono portare il sistema elettronica e meccanico a guasti e/o rotture.
+    \item La presenza di \textbf{radiazioni ionizzanti} (che sono localizzate nelle "Fasce Di Van Allen" nel nostro caso) che possono portare il sistema elettronica e meccanico a guasti e/o rotture.
 \end{itemize}
 
-I controlli di protezione (che vengono effettuati a tempo di esecuzione), assieme a controlli analoghi effettuati staticamente (come a tempo di progettazione o di compilazione), sono una metodologia molto efficace per ottenere un'elevata robustezza (rapida rilevazione degli errori e loro confinamento) in un sistema. 
+I controlli di protezione (che vengono effettuati durante il periodo di esecuzione del codice), assieme a controlli analoghi effettuati staticamente (come a tempo di progettazione o di compilazione), sono una metodologia molto efficace per ottenere un'elevata robustezza (rapida rilevazione degli errori e loro confinamento) in un sistema. 
 
-La tolleranza ai guasti può portare al peggioramento di altre prestazioni, per cui nella progettazione di un sistema è necessario trovare adeguate ottimizzazioni e compromessi. 
+La tolleranza ai guasti può portare al peggioramento di altre prestazioni, per cui nella progettazione di un sistema è necessario trovare adeguate ottimizzazioni e compromessi tra diversi fattori. 
 
 Nelle prossime sezioni verranno analizzate diverse tecniche sia di progettazione hardware che di programmazione software utilizzate per garantire che un sistema sia più affidabile e resiliente. Tutte queste tecniche portano il progettista essenzialmente a generare un sistema più ridondante, ovvero costituito da più parti rispetto al necessario, utilizzate col fine di sostituire o riparare durante il periodo di esecuzione del firmware eventuali parti danneggiate o rotte.
 
 \section{Radiazione spaziale e gestione della corruzione dell'informazione}
 
 Uno dei maggiori problemi nell'ambiente spaziale è la presenza di radiazioni cosmiche.
-I raggi cosmici sono particelle energetiche provenienti dallo spazio esterno alle quali è esposta la Terra come qualunque altro corpo celeste, nonché i satelliti e gli astronauti in orbita spaziale.
+I raggi cosmici sono particelle energetiche provenienti dallo spazio esterno alle quali è esposta la Terra (come qualunque altro corpo celeste, nonché i satelliti e gli astronauti in orbita spaziale).
 
 La presenza di raggi cosmici è inoltre preponderante nelle orbite Terrestri poco al di sopra rispetto alla LEO ("Low Earth Orbit"), questo perché il campo magnetico Terrestre tende a bloccare le radiazioni provenienti dallo spazio, schermarle ed infine intrappolarle all'interno di una zona di spazio superiore alle LEO chiamate "Fasce di Van Allen".
 A sua volta queste fasce sono divise in due diverse orbite (la prima fascia dai 1000 km ai 6000 km di distanza dalla Terra, la seconda da circa 6000 a 60000 km di distanza). La divisione è principalmente eseguita in base al tipo e all'intensità delle radiazioni di alta energia.
 
 Le radiazioni intrappolate in queste fasce sono costituiti principalmente da:
 \begin{itemize}
-    \item brillamenti solari.
+    \item vento salare.
     
     \item raggi cosmici galattici.
     
     \item particelle intrappolate.
+    
+    \item brillamenti solari.
 \end{itemize}
 
 L'entità dell'energia dei raggi cosmici, come si può evincere dalla figura 2.1, è dell'ordine dei $MeV$ e può arrivare a $GeV$ (con misurazioni dell'ordine  dei $100 MeV$ - $10GeV$).
@@ -266,7 +267,7 @@ L'entità dell'energia dei raggi cosmici, come si può evincere dalla figura 2.1
 
 Per ridondanza Hardware si intende l'inserimento nell'architettura del sistema fisico di componenti aggiuntivi, ovvero dell'hardware suppletivo, in un sistema soggetto a malfunzionamenti al fine di contribuire all'integrità del sistema e quindi il mantenimento delle funzioni per cui è stato implementato.
 
-La ridondanza Hardware è la forma generalmente più utilizzata e consiste essenzialmente nella replica di hardware di sistemi digitali già utilizzati nell'architettura base.
+La ridondanza Hardware è la forma generalmente più utilizzata nell'ambito delle applicazioni spaziali e consiste essenzialmente nella replica di hardware di sistemi digitali già utilizzati nell'architettura base.
 
 Un fattore importante che premia l'utilizzo di hardware è essenzialmente la scalabilità dei componenti e dunque progressiva diminuzione del loro costo. L'hardware ha infatti raggiunto delle grandezze così esigue da permettere l'integrazione di sempre più sottosistemi all'interno dello stesso circuito integrato mantenendo un costo sempre basso. Di conseguenza sempre meno materiale viene utilizzato per fornire la stessa funzione e il costo del singolo pezzo hardware è in continua discesa.
 
@@ -307,9 +308,10 @@ Attraverso diverse tecniche è possibile dunque il comportamento della parte dan
 \newline
 \end{itemize}
 
+\newpage
 \subsection{Ridondanza Hardware Attiva}
 
-Consiste invece in una metodologia più articolata di ridondanza hardware e articolata principalmente in 3 fasi ("\textbf{Fault Detection}","\textbf{Fault Location"} e {"Fault recovery"}) e che nella sua totalità consiste nel monitorare un sistema, identificare quando si è verificato un guasto e individuare il tipo di guasto e la sua posizione ed infine la correzione dell'errore/malfunzionamento.
+Consiste invece in una metodologia più articolata di ridondanza hardware e articolata principalmente in 3 fasi ("\textbf{Fault Detection}","\textbf{Fault Location"} e \textbf{"Fault recovery"}) e che nella sua totalità consiste nel monitorare un sistema, identificare quando si è verificato un guasto e individuare il tipo di guasto e la sua posizione ed infine correggere l'errore/malfunzionamento.
 
 La ridondanza hardware attiva non maschera il malfunzionamento e tende invece a localizzare il punto del sistema hardware in cui è in atto il malfunzionamento. 
 
@@ -320,71 +322,69 @@ I sistemi satellitari sono per l'appunto quelli che più utilizzano le tecniche 
 Di seguito analizziamo le principali tecniche utilizzate:
 
 \begin{itemize}
-    \item \textbf{Duplicazione con confronto}: il concetto di base della duplicazione con tecnica di confronto è quello di sviluppare due hardware
-    moduli che possono svolgere contemporaneamente la stessa funzione e confrontare i propri
-    uscite.
+    \item \textbf{Duplicazione con confronto}: il concetto di base della duplicazione con tecnica di confronto è quello di sviluppare due hardware che possono svolgere contemporaneamente la stessa funzione e confrontare le corrispettive uscite.
     
-    Se le due uscite sono conformi l'una all'altra, l'uscita è corretta e può essere utilizzata una delle due ulteriormente. In caso di disaccordo, l'errore viene segnalato dal comparatore. Questa tecnica è
-    utilizzato per il rilevamento degli errori.
+    Se le due uscite sono conformi l'una all'altra, l'uscita è corretta e può essere utilizzata una delle due uscite in modo arbitrario. In caso di disaccordo, l'errore viene segnalato dal comparatore. Questa tecnica è utilizzato per il solo rilevamento degli errori e non può garantire la correzione.
     \begin{figure}[htbp]
     \centerline{\includegraphics[scale=.67]{examples/ActiveComparator.PNG}}
-    \caption{La sezione in codice C riguardante la definizione dei puntatori da cui iniziare a leggere i codici di backup.}
+    \caption{Uno schema esplicativo della tecnica "Duplicazione con confronto".}
     \label{fig}
     \end{figure}
 \newline
     
     \item \textbf{Standy Sparing}: in questa tecnica, un modulo è scelto come modulo "operativo" e uno o più moduli fungono da "pezzi di ricambio".
     
-    Schemi di rilevamento dei guasti come quello sopra menzionato vengono utilizzati per rilevare il guasto nel sistema. Quindi viene determinata la posizione del guasto. 
+    Schemi di rilevamento dei guasti come quello sopra menzionato vengono utilizzati per rilevare il guasto nel sistema. Successivamente viene determinata la posizione del guasto. 
     
-    \item \textbf{Watchdog Timers}: si utilizza un timer hardware dedicato che deve essere ripristinato ripetutamente dal sistema. Se il sistema non riesce a ripristinare il timer, significa che condizione errata.
+    \item \textbf{Watchdog Timers}: si utilizza un timer hardware dedicato che deve essere ripristinato ripetutamente dal sistema. Se il sistema non riesce a ripristinare il timer dopo un periodo massimo, significa che si è verificata una problematica.
     
-    In tal caso, il sistema stesso viene messo a ripristinare la condizione supponendo che
-    inizierà dallo stato noto e privo di errori.
+    In tal caso, il sistema stesso viene obbligato a ripristinare la condizione supponendo che
+    inizierà dallo stato iniziale e privo di errori.
     
 \end{itemize}
 \section{ Ridondanza Software}
 Gli schemi di "\textbf{Fault Tolerance}" già espressi in precedenza possono essere implementati in maniera analoga anche nel software.
-Questo può essere fatto scrivendo una piccola routine che può controllare periodicamente lo stato della memoria
-leggendo e scrivendo ripetutamente su di esso. 
-
+Questo può essere fatto scrivendo una piccola routine che può essenzialmente controllare periodicamente lo stato della memoria leggendo e scrivendo ripetutamente su di essa. 
 
 Le principali tecniche di ridondanza software possono essere divise in queste categorie:
 \begin{itemize}
-    \item \textbf{Controlli di consistenza}: questo schema richiede una conoscenza anticipata delle informazioni che devono essere corrette. Ad esempio, nel contesto delle applicazioni spaziali, un parametro di un determinato sensore contenuto in uno dei sottosistemi non dovrebbe superare un determinato limiti, altrimenti ci sarebbe una compromissione dell'intera missione. Questo valore può essere memorizzato e la routine del software può controllare ripetutamente se il valore in tempo reale si trova all'interno intervallo definito o meno. In caso di superamento dei valori nominali, una flag può essere impostata per segnalare al sistema di eseguire l'azione appropriata.
+    \item \textbf{Controlli di consistenza}: questo schema richiede una conoscenza anticipata delle informazioni che devono essere corrette. Ad esempio, nel contesto delle applicazioni spaziali, un parametro di un determinato sensore contenuto in uno dei sottosistemi non dovrebbe superare un determinato limite (un valore definito a priori), altrimenti ci sarebbe una compromissione dell'intera missione. Questo valore può essere memorizzato e la routine del software può controllare ripetutamente se il valore in tempo reale si trova all'interno intervallo definito o meno. In caso di superamento dei valori nominali, una flag può essere impostata per segnalare al sistema di eseguire l'azione appropriata.
     
     \item \textbf{Controlli delle "Funzioni del Software"}: questi controlli vengono eseguiti per verificare le capacità del sistema e il corretto funzionamento di moduli di sistema. Ad esempio, il processore può scrivere dei specifici "Test Cases" in memoria e
-    leggerli al fine di determinare la corretta memorizzazione e recupero dei dati.
+    leggerli per determinare la corretta memorizzazione e il successivo recupero dei dati precedentemente scritti.
 
     \item \textbf{Replicazione del software}: il concetto di base è quello della programmazione di diverse versioni indipendenti di software.
-    Le diverse versioni vengono tutte utilizzate e poi si arriva a confrontare i risultati di tutti gli algoritmi. Ciascuno di questi moduli è progettato e sviluppato da
-    diversi gruppi di persone per garantire che non ci siano due gruppi che commettano lo stesso errore.
+    Le diverse versioni vengono tutte utilizzate e poi infine si arriva a confrontare i risultati di tutti gli algoritmi. Ciascuno di questi moduli è generalmente progettato e sviluppato da
+    diversi gruppi di persone in modo da limitare la possibilità che non ci siano due gruppi che commettano lo stesso errore.
 
 \end{itemize}
 
-\section{Principali tecniche di ridondanza utilizzate nel progetto Abacus}
+\section{Principali tecniche di ridondanza utilizzate nel progetto ABACUS}
 
 Dopo aver analizzato le principali metodologie di ridondanza sia hardware che software, andiamo ad esaminare ciò che è stato fatto nel lavoro di tesi ed in particolare sul microcontrollore MCU MSP430.
 \newline
-Per quanto riguarda l'implementazione di queste strategie di protezione da corruzioni e malfunzionamenti, la maggior parte dello sviluppo nel nostro caso  ha riguardato l'ampliamento della ridondanza software a sfavore di quella hardware.
+Per quanto riguarda l'implementazione di queste strategie di protezione da corruzioni e malfunzionamenti, la maggior parte dello sviluppo nel nostro caso ha riguardato l'ampliamento della ridondanza software.
 
 La scelta è stata fatta principalmente per due motivi:
 \begin{itemize}
-    \item un limitato spazio fisico in cui inserire eventuali doppioni di parti hardware del sistema. L'inserimento di nuovi sottosistemi nel picosatellite avrebbe necessariamente richiesto una riprogettazione del sistema dal punto di vista elettronica, dal punto di vista meccanico e per quanto riguardo il consumo di potenza dell'intero satellite.
+    \item un limitato spazio fisico in cui inserire eventuali doppioni di parti hardware del sistema. L'inserimento di nuovi sottosistemi nel Nanosatellite avrebbe necessariamente richiesto una riprogettazione del sistema sia dal punto di vista elettronico che dal punto di vista meccanico. Ciò avrebbe inoltre causato un aumento nel consumo di potenza dell'intero satellite.
+    
     \item l' occupazione di memoria (sia RAM in esecuzione che ROM) del microcontrollore è notevolmente inferiore rispetto allo spazio di memoria disponibile.
 \end{itemize}
 \newline
-Lo sviluppo della Fault Tolerance ha dunque sfruttato molte delle tipologie di tecniche di ridondaza software già definite teoricamente in precedenza e 
-l'implementazione ha principalmente riguardato:
+Lo sviluppo della Fault Tolerance ha dunque sfruttato molte delle tipologie di tecniche di ridondanza software già definite teoricamente in precedenza e l'implementazione ha principalmente riguardato:
 \begin{itemize}
-    \item Controlli di consistenza: è consistita principalmente nell'utilizzo di strutture dati a lunghezza fissa, generalmente delle strutture a array di dati a scapito di uno scarso utilizzo della parte di memoria definita "heap" (a lunghezza variabile) in modo da poter garantire in fase di esecuzione un controllo sulla dimensione dell'occupazione di memoria. Un'altra implementazione ha riguardato l'utilizzo di sezioni di memoria divise e distanti tra loro. La sua definizione è stata definita a priori (vedremo successivamente l'utilizzo di parti di memoria definite "persistent" all'interno della RAM ). Tale implementazione é di fatto la replicazione della strategia già espressa in precedenza sulla scala di sezioni di codice.
-    \item Controlli di funzione: l'utilizzo di algoritmi di rivelazione di errori (ad esempio l'algoritmo CRC, "Cyclic Redudancy Check") atti a prevenire eventuali corruzioni generate dall'interazione del satellite con la radiazione spaziale.
-    \item Replicazione del software: è consistita nella creazione e successivo inserimento di copie di codice di codice all'interno della memoria, utilizzabili secondo una logica di utilizzo da parte del microcontrollore tramite un algoritmo definito di "Bootloader". La replicazione ha riguardato anche la replicazione sia in memoria RAM che ROM di alcune sezioni di dati importanti immagazzinati durante la missione, come ad esempio le informazioni riguardanti lo stato del satellite.
+    \item Controlli di consistenza: è consistita principalmente nell'utilizzo di strutture dati a lunghezza fissa, generalmente delle strutture a array di dati, a scapito di uno scarso utilizzo della parte di memoria definita "heap" (a lunghezza variabile), in modo da poter garantire in fase di esecuzione un controllo sulla dimensione dell'occupazione di memoria. 
+    Un'altra implementazione ha riguardato l'utilizzo di sezioni di memoria divise e distanti tra loro. La sua definizione è stata definita a priori (vedremo successivamente un largo utilizzo di parti di memoria definite "persistent" all'interno della RAM ). Tale implementazione é di fatto la replicazione della strategia già espressa in precedenza sulla scala di sezioni di codice.
+    
+    \item Controlli di funzione: l'utilizzo di algoritmi di rivelazione di errori (ad esempio l'algoritmo CRC, "Cyclic Redudancy Check") o di algoritmi di scrubbing di memoria, atti a prevenire e/o correggere eventuali corruzioni generate dall'interazione del satellite con la radiazione spaziale.
+    
+    \item Replicazione del software: è consistita nella creazione e successivo inserimento di copie di codice di codice all'interno della memoria, utilizzabili secondo una logica di utilizzo da parte del microcontrollore tramite un algoritmo definito di "Bootloader". La replicazione ha riguardato anche sia in memoria RAM che ROM di alcune sezioni di dati importanti immagazzinati durante la missione, come ad esempio le informazioni riguardanti lo stato del satellite.
 \end{itemize}
 
 \chapter{Bootloader}
 
-\section{Cos'è un bootloader?}
+\section{Cos'è un Bootloader?}
 
 L'algoritmo di \textbf{bootloader} è una parte di codice collocata nella parte iniziale del programma che permette di programmare o aggiornare la memoria flash del microcontrollore “MSP430” della Texas Instruments.
 
@@ -713,7 +713,13 @@ Ad ogni istruzioni eseguita il timer si resetta. Se invece supera la soglia sign
 \newline
 Questa è la funzione che si occupa di verificare l’integrità del codice.
 \footnote{Nota Bene: il valore 0xDEAD è un valore esadecimale totalmente casuale (diverso da 0) che permette al WatchDog Timer di scattare e di permettere un riavvio del codice a partire dalla sezione di start.}
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=Matlab,
+                   numbers=left,
+                   stepnumber=1,
+                   numbersep=10pt,
+                   tabsize=4,
+                   showspaces=false,
+                   showstringspaces=false]
     if(memory_mcu_checkProgramIntegrity(0) == -1 )
     {
         WDTCTL = 0xDEAD;
@@ -771,7 +777,7 @@ In questo caso il programma entra nel controllo dell'integrità e dopo aver rive
 \newline
 
 Il primo passo per far scattare la funzione di ripristino del codice eseguito tramite l'algoritmo di bootloader è quello di riconoscere la corruzione. Questa funzione di controllo dell'integrità del codice è eseguita dalla seguente parte di codice:
-
+\begin{small}
 \begin{lstlisting}[language=C]
     int8_t memory_mcu_checkProgramIntegrity(uint8_t force)
 {
@@ -829,7 +835,7 @@ Il primo passo per far scattare la funzione di ripristino del codice eseguito tr
     return -1;
 }
 \end{lstlisting}
-
+\end{small}
 La procedura di controllo dell'integrità della memoria viene richiamata periodicamente dal microcontrollore. Questa funzione si occupa di controllare in primo luogo la correttezza di un codice (la cosiddetta Magic Word presente in ogni copia) e successivamente si occupa di controllare tramite l'algoritmo CRC l'integrità dell'intero codice eseguito. Il test da esito negativo se i CRC valutati a priori e posteriori non coincidono.
 
 Se tale test da esito negativo, il sistema viene riavviato tramite un software reset.
@@ -857,7 +863,7 @@ Nel nostro caso il microcontrollore passa a valutare l'integrità della seconda 
 
 Una volta attestata la correttezza del codice di backup, l'algoritmo incomincia a sovrascrivere il codice precedente direttamente col nuovo codice integro. Ultimata questa procedura il codice dovrebbe ritornare dunque integro e nuovamente riutilizzabile.
 \newline
-
+\begin{small}
 \begin{lstlisting}[language=C]
     //check memory integrity
     int8_t result = memory_mcu_checkAlternativeProgramsIntegrity(0);
@@ -881,7 +887,7 @@ Una volta attestata la correttezza del codice di backup, l'algoritmo incomincia 
     return -1;
     
 \end{lstlisting}
-
+\end{small}
 \newline
 Terminata tale fase, il sistema viene resettato in modo da poter controllare la correttezza del nuovo codice e successivamente ripartire con una nuova versione di codice da poter eseguire ciclicamente.
 
@@ -939,7 +945,14 @@ Di conseguenza, il sistema risulta non più affidabile nel caso in cui il bootlo
 
 bootloader.h:
 
-\begin{lstlisting}[language=c]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef BOOTLOADER_H_
 #define BOOTLOADER_H_
 
@@ -981,10 +994,18 @@ void bootloaderFlash(uint32_t startAddress, uint8_t simulation);
 
 #endif /* BOOTLOADER_H_ */
 \end{lstlisting}
+
 \clearpage
 bootloader.c:
 
-\begin{lstlisting}[language=c]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 
 #include "bootloader.h"
 
@@ -1676,7 +1697,7 @@ Descriviamo dunque le varie versioni del registro di stato presenti nel microcon
     Soltanto nel caso di Power Reset la memoria SRAM, essendo una memoria volatile perde di fatto i valori correnti salvati e ritorna non inizializzata. In questo caso sarà necessaria in ogni caso una nuova inizializzazione o con i valori salvati nelle altre copie o con i valori di default.
     
     \item SatelliteStatusRamBackup: la versione di backup in memoria SRAM, ha anch’essa l’etichetta \#PRAGMA PERSISTENT e viene periodicamente sovrascritta durante la gestione di ogni task.Viene mantenuta continuamente integra e non soggetta a corruzioni da un algoritmo di scrubbing, ovvero un codice che tramite una ridondanza permette di evidenziare eventuali corruzioni e di correggerle (fino a 2 bit errati ogni blocco da 8 byte).
-    In questo modo, è possibile mitigare il fenomeno della corruzione dei dati e limitare il disturbo generato dalle radiazioni cosmiche a cui il satellite è soggetto in orbita.
+    In questo modo, è possibile mitigare il fenomeno della corruzione dei dati e limitare il disturbo generato dalle radiazioni ionizzanti a cui il satellite è soggetto in orbita.
     Poiché l’algoritmo di scrubbing non garantisce sempre la correzione delle corruzioni, prima di eseguire il ripristino dei valori nella versione di backup, il sistema si assicura dell'assenza di errori in tutta la memoria. In questo modo il ripristino dei valori in SRAM viene effettuato soltanto nel caso in cui venga assicurata al coincidenza di parità di parità quadridimensionali a priori o posteriori. In caso contrario, si è scelto di scartare i valori in SRAM e di fare affidamento a quelli in memoria FLASH che successivamente descriverle.
     
     \item SatelliteStatusRomBackup: la versione di backup in memoria flash, la quale risulta una memoria non volatile e più protetta rispetto alle radiazioni. 
@@ -1698,7 +1719,15 @@ Durante la fase di testing, abbiamo eseguito una valutazione del il tempo di ese
 \subsection{Codice sorgente dell'algoritmo di scrubbing}
 
 Scrubbing.h:
-\begin{lstlisting}[language=c][fontsize=\small]
+
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef SCRUBBING_H_
 #define SCRUBBING_H_
 #include "abacus.h"
@@ -1761,7 +1790,14 @@ uint8_t periodicScrubPersistentRAM(){
 
 \end{lstlisting}
 RomBackup.h:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef BACKUPROM_H_
 #define BACKUPROM_H_
 
@@ -1796,9 +1832,15 @@ uint8_t isRomBackupPossible(uint32_t dataStartingAddress, uint32_t size);
 
 
 \end{lstlisting}
-
 RomBackup.c:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include "BackupRom.h"
 #include "abacus.h"
 #include <math.h>
@@ -1866,7 +1908,14 @@ uint8_t isRomBackupPossible(uint32_t dataStartingAddress, uint32_t size)
 \end{lstlisting}
 
 PersistentRam.h:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef PERSISTENTRAM_H_
 #define PERSISTENTRAM_H_
 
@@ -1930,9 +1979,15 @@ struct RamBackup
 
 
 \end{lstlisting}
-
 PersistentRam.c:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include "PersistentRam.h"
 #include <time.h>
 #include <stdlib.h>
@@ -2312,7 +2367,14 @@ Di seguito è disponibile la stima che più precisamente stima la probabilità. 
 \newpage
 \subsection{Codice sorgente riguardante il test di performance dell'algoritmo di scrubbing}
 main.c:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include <stdio.h>
 #include <stdlib.h>
 #include "scrub.h"
@@ -2373,9 +2435,15 @@ int main(int argc, char *argv[]) {
 	return 0;
 	}
 \end{lstlisting}
-
 scrub.h:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef SCRUB_H_
 #define SCRUB_H_
 
@@ -2495,9 +2563,15 @@ void copyPersistentRamForFinalTest(uint8_t* startingPointer,uint8_t* copyStartin
 #endif /* SCRUB_H_ */
 \end{lstlisting}
 
-
 scrub.c:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include "scrub.h"
 #include <stdio.h>
 #include <string.h>
@@ -2587,8 +2661,6 @@ int16_t Calc_DParity(int16_t Data[])
 
     return dparity;
 }
-
-
 
 int8_t scrubbing_bytes(int16_t Data[8],int8_t index)
 {
@@ -2896,7 +2968,7 @@ void copyPersistentRamForFinalTest(uint8_t* startingPointer,uint8_t* copyStartin
 }
 \end{lstlisting}
 
-\subsection{Iniezione di corruzioni nella sezione di "Persistent" nel sistema Abacus}
+\subsection{Iniezione di corruzioni nella sezione di "Persistent" nel sistema ABACUS}
 
 Il test di integrazione dell'algoritmo di scrubbing su un sistema microcontrollore è consistito nella corruzione di una locazione casuale di una parte di memoria persistent RAM, copia di una sezione di memoria RAM utilizzata dal microcontrollore. 
 Questa parte di memoria definita come backup di dati utilizzati dal sistema è generica. In una situazione pratica questa parte di memoria coinciderebbe con lo spazio di memoria occupato dal registro di stato del satellite.
@@ -2967,13 +3039,13 @@ Nella figura 4.11 andiamo dunque ad analizzare il contenuto della memoria princi
 
 \chapter{Autodiagnosi delle componenti del microcontrollore/FPGA MSP430}
 
-Il sistema di Abacus permette anche in fase di esecuzione di disattivare o attivare la comunicazione con alcune parti dell’hardware senza inficiare direttamente sul corretto funzionamento del satellite. 
+Il sistema di ABACUS permette anche in fase di esecuzione di disattivare o attivare la comunicazione con alcune parti dell’hardware senza inficiare direttamente sul corretto funzionamento del satellite. 
 Questa caratteristica è molto utile in un ambiente in cui alcuni componenti possono essere ad esempio danneggiate da agenti esterni come radiazione o da detriti e oltretutto non possono essere direttamente riparati durante il volo. 
 
 L’obiettivo dunque dell’algoritmo nel caso del controllo dei sensori è quello di testare individualmente ogni singola componente hardware facendolo interrogare dalla CPU tramite il corretto protocollo di comunicazione.
 
 
-\section{Architettura Hardware e protocolli di comunicazione in Abacus}
+\section{Architettura Hardware e protocolli di comunicazione in ABACUS}
 
 Come si evince dalla figura 6.2, la comunicazione con il microcontrollore e i sensori avviene tramite protocollo I2C.
 Per quanto riguarda sia la memoria Flash del microcontrollore ("MCU Flash") che la memoria Flash dell'FPGA ("FPGA Flash") il microcontrollore utilizza il protocollo SPI per comunicare con entrambe le memorie. Anche in questo caso nelle memorie sono definiti dei registri (3 in entrambi i casi) in cui viene definito un valore di ID e di conseguenza la modalità di controllo è la stessa utilizzata per i sensori.
@@ -2999,8 +3071,8 @@ Analizziamo dunque come è formato il pacchetto SPI ricevuto:
 
 
 
-Ogni versione di Abacus ha a disposizione diversi componenti hardware ma il numero dei sensori è rimasto inalterato nel tempo.
-Di seguito è possibile consultare i valori dei registri necessari per il controllo. Tale costanti sono specificate per tutte e tre le diverse versioni di abacus disponibili ad oggi:
+Ogni versione di ABACUS ha a disposizione diversi componenti hardware ma il numero dei sensori è rimasto inalterato nel tempo.
+Di seguito è possibile consultare i valori dei registri necessari per il controllo. Tale costanti sono specificate per tutte e tre le diverse versioni di ABACUS disponibili ad oggi:
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.55]{examples/registerMapSensori.PNG}}
@@ -3009,7 +3081,7 @@ Di seguito è possibile consultare i valori dei registri necessari per il contro
 \end{figure}
 \vspace{0.5cm}
 
-La struttura dell'algoritmo è dunque utilizzabile per tutte le diverse versioni di Abacus.
+La struttura dell'algoritmo è dunque utilizzabile per tutte le diverse versioni di ABACUS.
 Il codice utilizza ovviamente una delle tre configurazioni in armonia con l'impostazione del sistema (nei nostri test è stata utilizzata la versione 2017). Per utilizzare una versione differente basta cambiare le costanti che l'algoritmo e tali valori sono già presenti nel file header.
 
 
@@ -3025,7 +3097,7 @@ Ogni malfunzionamento (del singolo sensore o dell'intero bus I2C) è gestito in 
 
 La funzione di controllo dello stato del sensore infatti fornisce come valore di ritorno un valore pari a 0 nel caso in cui tutto funzioni correttamente, mentre un valore maggiore di 0 nel caso in cui abbia evidenzia una incorrettezza.
 
-Questo valore di ritorno sarà dunque sommato per tutti i sensori di Abacus e la somma fornirà l'entità del problema. E' stata dunque stabilità una soglia minima (pari al valore esadecimale 0x10) per cui il sistema eseguirà subito un software reset.
+Questo valore di ritorno sarà dunque sommato per tutti i sensori di ABACUS e la somma fornirà l'entità del problema. E' stata dunque stabilità una soglia minima (pari al valore esadecimale 0x10) per cui il sistema eseguirà subito un software reset.
 
 Come altra contromisura sono state definite delle flag salvati nella zona di memoria definite come "Persistent" (definite a partire dallo stesso meccanismo utilizzato nel caso dell'algoritmo di scrubbing) e dunque consultabile anche dopo un software reset, in modo da escludere direttamente al nuovo riavvio l'utilizzo del sensore danneggiato evitando così un errato utilizzo delle periferiche malfunzionanti. 
 
@@ -3045,7 +3117,14 @@ Lo stesso funzionamento è replicato nel caso del controllo delle memorie flash 
 Di seguito è fornito l'implementazione dell'algoritmo di autodiagnosi in codice C:
 
 selfDiag.h:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef INCLUDE_SELFDIAG_H_
 #define INCLUDE_SELFDIAG_H_
 #include "abacus.h"
@@ -3089,7 +3168,7 @@ selfDiag.h:
 #define DS1775_FPGA_STD_CONFIG          0x60
 
 
-//Codifica della prioritÃ  di autodiagnosi
+//Codifica della priorità di autodiagnosi
 // Il byte che manterrà l'informazione ha dunque la seguente struttura:
 //  0b xxxx xxxx ---> Ogni singolo bit (tranne il secondo che non Ã¨ utilizzato) avrÃ  la seguente logica:
 //                    0 -> Sensore funzionante
@@ -3168,9 +3247,15 @@ int8_t selfDiagInit();
 #endif /* INCLUDE_SELFDIAG_H_ */
 \end{lstlisting}
 
-
 selfDiag.c:
-\begin{lstlisting}[language=c][fontsize=\small]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include "selfDiag.h"
 #include "abacus.h"
 
@@ -3908,6 +3993,7 @@ int8_t selfDiagInit()
 
 
 \end{lstlisting}
+
 \newpage
 
 \section{Test dell'algoritmo di autodiagnosi}
@@ -4137,8 +4223,14 @@ A prescindere dalla modalità di test, i requisiti che il sistema dovrà garanti
 \subsection{Codice sorgente dell'algoritmo di controllo del raggiungimento dell'orbita}
 
 Acceleration.h:
-\begin{small}
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #ifndef ACCELERATION_H_
 #define ACCELERATION_H_
 
@@ -4193,10 +4285,15 @@ uint8_t isSatelliteInSpace();
 
 #endif
 \end{lstlisting}
-\end{small}
 Acceleration.c:
-\begin{small}
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include "Acceleration.h"
 #include <math.h>
 #include "abacus.h"
@@ -4296,7 +4393,6 @@ uint8_t isSatelliteInSpace()
 }
 
 \end{lstlisting}
-\end{small}
 \subsection{Test comparativo per il calcolo del valore medio tramite il Circular Buffer}
 
 Data la semplicità del componente software, il test di funzionamento è stato eseguito tramite compilatore gcc e direttamente da terminale Linux. La scelta è stata possibile poiché il suo test non necessita di nessuna libreria esterna.
@@ -4316,8 +4412,14 @@ I valori di accelerazione media sono dunque stati salvati in un file ".csv" in e
 
 Di seguito è disponibile il file main.c utilizzato per testare il componente:
 
-\begin{small}
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include <stdio.h>
 #include "Acceleration.h"
 #include <time.h>
@@ -4360,12 +4462,18 @@ int main()
     return 0;
 }
 \end{lstlisting}
-\end{small}
 
 Anche  l'implementazione di alcune funzioni in Acceleration.c sono state modificate per poter iniettare degli input arbitrari.
 \newline
 Modifiche a Acceleration.c:
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 int32_t getAbsAcceleration(int32_t x, int32_t y, int32_t z)
 {
     
@@ -4401,7 +4509,14 @@ I valori calcolati sono poi salvati in una file ".csv", come nell'algoritmo di t
 \newline\newline
 Di seguito è possibile consultare il main della versione di confronto in linguaggio C++:
 \newline
-\begin{lstlisting}[language=C++]
+\begin{lstlisting}[language=C++,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include <iostream>
 #include <boost/circular_buffer.hpp>
 #define MAX_SIZE 32
@@ -4455,7 +4570,6 @@ int main(){
 }
 
 \end{lstlisting}
-
 \newpage
 \subsection{Rappresentazione grafica dei valori di accelerazione media ottenuta in Matlab}
 
@@ -4486,7 +4600,14 @@ Lo script di Matlab è dunque diviso in due parti:
 \newpage
 Il codice Matlab main.m:
 \newline
-\begin{lstlisting}[language=Matlab]
+\begin{lstlisting}[language=Matlab,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 clear all
 clc
 close all
@@ -4535,8 +4656,14 @@ Questa azione permette il controllo e l'eventuale correzione dei problemi riscon
 \newline\newline
 Il file main.c:
 
-\begin{small}
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
 #include <msp430.h>
 #include <stdio.h>
 #include "abacus.h"
@@ -4655,7 +4782,6 @@ int main(void)
     return 0;
 }
 \end{lstlisting}
-\end{small}
 
 
 
@@ -4664,7 +4790,7 @@ int main(void)
 \section{Conclusioni sul lavoro di tesi}
 
 Il lavoro di tesi presentato in questo elaborato si è posto l'obiettivo di progettare un sistema di controllo,protezione e correzione
-utilizzato principalmente come contromisura per quanto riguarda problemi di consistenza dell'informazione contenuta in un microcontrollore contenuto all'interno di un picosatellite.
+utilizzato principalmente come contromisura per quanto riguarda problemi di consistenza dell'informazione contenuta in un microcontrollore contenuto all'interno di un Nanosatellite.
 
 Dai risultati ottenuti attraverso l'attività di debugging e testing delle singole componenti software, è possibile affermare che l'integrità 
 del sistema e la sua tolleranza rispetto ad eventuali malfunzionamenti dei singoli componenti hardware è migliorata notevolmente.
@@ -4698,6 +4824,7 @@ sicurezza di tutta la missione spaziale.
 
 Infine, questo approccio potrebbe permettere un "tuning" del sistema dal punto di vista delle  risorse software utilizzate all'interno degli algoritmi, come ad esempio la scelta del numero di copie di codice di backup che potrebbe essere inserite all'interno della memoria,
 aspetto che garantirebbe sicuramente una vita del satellite notevolmente più lunga.
+\appendix
 \chapter{Gestione di una sezione di firmware Persistent o Noinit}
 
 \subsection{Passo 1: Dichiarazione della variabile}
@@ -4767,8 +4894,14 @@ E' necessaria definire dunque una sezione di memoria in linker inserirà automat
 Ecco un esempio di linker script in cui è presente una sezione persistent.
 Come per tutte le altre zone di memoria, è necessario definire l'inizio e la lunghezza della zona di memoria. Ricordiamo 
 di creare zone di memoria non sovrapposte l'una con l'altra al fine problemi di sovrascrittura non voluta.
-
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[language=C,
+                   basicstyle=\scriptsize,
+                   numbers=left,
+                   stepnumber=0,
+                   numbersep=4pt,
+                   tabsize=2,
+                   showspaces=false,
+                   showstringspaces=false]
     lnk_msp430f5438a.cmd :
     
 /****************************************************************************/
@@ -5026,13 +5159,13 @@ Questi sono i passi da eseguire per muoversi tramite prompt dei comandi nel bran
 
     \begin{table}[htbp]
     \centerline{\includegraphics[scale=.85]{examples/datasheet/abacusDatasheet7.PNG}}
-    \caption{Tabella riguardante la scelta dei pinout H1 di Abacus}
+    \caption{Tabella riguardante la scelta dei pinout H1 di ABACUS}
     \label{fig}
     \end{table}
     
     \begin{table}[htbp]
     \centerline{\includegraphics[scale=.85]{examples/datasheet/abacusDatasheet8.PNG}}
-    \caption{Tabella riguardante la scelta dei pinout H2 di Abacus}
+    \caption{Tabella riguardante la scelta dei pinout H2 di ABACUS}
     \label{fig}
     \end{table}
     
@@ -5051,19 +5184,19 @@ Questi sono i passi da eseguire per muoversi tramite prompt dei comandi nel bran
 
     \begin{table}[htbp]
     \centerline{\includegraphics[scale=.8]{examples/datasheet/abacusDatasheet4.PNG}}
-    \caption{Tabella riassuntiva dei valori limite di funzionamento di Abacus}
+    \caption{Tabella riassuntiva dei valori limite di funzionamento di ABACUS}
     \label{fig}
     \end{table}
     
     \begin{table}[htbp]
     \centerline{\includegraphics[scale=.8]{examples/datasheet/abacusDatasheet5.PNG}}
-    \caption{Tabella riassuntiva dei valori consigliati di funzionamento di Abacus}
+    \caption{Tabella riassuntiva dei valori consigliati di funzionamento di ABACUS}
     \label{fig}
     \end{table}
     
     \begin{table}[htbp]
     \centerline{\includegraphics[scale=.8]{examples/datasheet/abacusDatasheet6.PNG}}
-    \caption{Tabella riassuntiva delle caratteristiche elettriche di Abacus}
+    \caption{Tabella riassuntiva delle caratteristiche elettriche di ABACUS}
     \label{fig}
     \end{table}
 
@@ -5111,7 +5244,7 @@ Università di Trento.
 
 \bibitem{Daniel Luis Pancorbo D'Ammando} 
 Daniel Luis Pancorbo D'Ammando, Prof. Augusto Nascetti. 
-\textit{"Progetto e realizzazione di un computer di bordo per picosatelliti basato su piattaforma ibrida microcontrollore-FPGA"}.
+\textit{"Progetto e realizzazione di un computer di bordo per nanosatelliti basato su piattaforma ibrida microcontrollore-FPGA"}.
 Anno Accademico 2010/2011
 
 \bibitem{Github} 
@@ -5119,7 +5252,7 @@ Github.
 \textit{https://github.com/}
 
 
-\bibitem{Abacus}
+\bibitem{ABACUS}
 Group of Astrodynamics for the use of the Space Systems.
 
 \textit{"GAUSS OBC ABACUS 2017 Datasheet"}
